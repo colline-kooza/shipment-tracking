@@ -1,0 +1,268 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  AGENT
+  STAFF
+}
+
+model User {
+  id            String        @id @default(cuid())
+  name          String
+  firstName     String
+  lastName      String
+  phone         String        @unique
+  email         String        @unique
+  emailVerified DateTime?
+  image         String?
+  jobTitle      String?
+  role          UserRole      @default(USER)
+  password      String
+  location      String? // Added for agent location tracking
+  organisation  Organisation? @relation(fields: [orgId], references: [id])
+  orgId         String?
+  orgName       String?
+  status        Boolean       @default(true)
+  accounts      Account[]
+  sessions      Session[]
+  shipments     Shipment[] // Relation to shipments created by this user
+  documents     Document[] // Relation to documents uploaded by this user
+  isVerfied     Boolean       @default(false)
+  token         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model Organisation {
+  id          String     @id @default(cuid())
+  name        String
+  description String?
+  logo        String?
+  users       User[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  Shipment    Shipment[]
+}
+
+model Customer {
+  id            String  @id @default(cuid())
+  name          String
+  email         String?
+  phone         String?
+  contactPerson String?
+  address       String?
+  country       String?
+  passport      String? // For individual customers
+  company       String? // For company customers
+  isActive      Boolean @default(true)
+  notes         String?
+
+  // Relation to Organisation
+  // organisation Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  orgId String
+
+  // Relationships
+  shipments Shipment[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model Shipment {
+  id             String          @id @default(cuid())
+  reference      String          @unique
+  type           ShipmentType
+  client         String
+  origin         String
+  destination    String
+  status         ShipmentStatus  @default(CREATED)
+  container      String? // Used for sea freight
+  truck          String? // Used for road freight
+  arrivalDate    DateTime
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  invoiceStatus  InvoiceStatus   @default(PENDING)
+  creator        User            @relation(fields: [createdBy], references: [id])
+  createdBy      String
+  documents      Document[]
+  timeline       TimelineEvent[]
+  checkpoints    Checkpoint[]
+  Organisation   Organisation?   @relation(fields: [organisationId], references: [id])
+  organisationId String?
+  Customer       Customer?       @relation(fields: [customerId], references: [id])
+  customerId     String?
+  TrackingEvent  TrackingEvent[]
+}
+
+model TrackingEvent {
+  id        String         @id @default(cuid())
+  status    ShipmentStatus
+  location  String?
+  notes     String? // Carrier notes
+  timestamp DateTime       @default(now())
+
+  // Relations
+  shipment   Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  shipmentId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Enums
+enum PackageType {
+  METALS
+  WOODEN
+  CARTON
+  BAG
+}
+
+enum GoodsType {
+  COMMERCIAL
+  PERSONAL
+  FRAGILE
+  OTHER
+}
+
+enum ItemCondition {
+  GOOD
+  FAIR
+  AVERAGE
+  AS_RECEIVED
+}
+
+enum ShipmentType {
+  SEA
+  AIR
+  ROAD
+}
+
+enum ShipmentStatus {
+  CREATED
+  DOCUMENT_RECEIVED
+  DOCUMENTS_SENT
+  CARGO_ARRIVED
+  DELIVERY_CONFIRMED
+  ENTRY_REGISTERED
+  CLEARED
+  IN_TRANSIT
+  DELIVERED
+  COMPLETED
+  DOCUMENT_REJECTED
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  CANCELLED
+}
+
+enum DocumentStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum DocumentType {
+  COMMERCIAL_INVOICE
+  PACKING_LIST
+  BILL_OF_LADING
+  AIRWAY_BILL
+  IMPORT_LICENCE
+  CERTIFICATE_OF_CONFORMITY
+  TAX_EXEMPTION
+  CERTIFICATE_OF_ORIGIN
+  CMR_WAYBILL
+}
+
+model Document {
+  id            String         @id @default(cuid())
+  name          String
+  type          DocumentType
+  fileUrl       String
+  uploadedAt    DateTime       @default(now())
+  uploadedBy    User           @relation(fields: [userId], references: [id])
+  userId        String
+  shipment      Shipment?      @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  referenceNo   String?
+  shipmentId    String?
+  status        DocumentStatus @default(PENDING)
+  notes         String?
+  notifications Notification[]
+}
+
+model TimelineEvent {
+  id         String         @id @default(cuid())
+  shipment   Shipment?      @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  shipmentId String?
+  status     ShipmentStatus
+  notes      String?
+  location   String?
+  timestamp  DateTime       @default(now())
+  createdBy  String
+}
+
+model Checkpoint {
+  id        String     @id @default(cuid())
+  name      String
+  location  String
+  order     Int
+  shipments Shipment[]
+}
+
+enum NotificationType {
+  DOCUMENT_ALERT
+  STATUS_CHANGE
+  TASK_ASSIGNED
+  DEADLINE_APPROACHING
+}
+
+model Notification {
+  id         String           @id @default(cuid())
+  type       NotificationType
+  title      String
+  message    String
+  isRead     Boolean          @default(false)
+  timestamp  DateTime         @default(now())
+  userId     String
+  shipmentId String?
+  documentId String?
+  document   Document?        @relation(fields: [documentId], references: [id], onDelete: SetNull)
+}
