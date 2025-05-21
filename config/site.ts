@@ -1,31 +1,21 @@
 export const siteConfig = {
-  name: "GreenLink Freight Logistics",
-  title: "GreenLink | Quality Shipping",
-  url: "https://green-link-tracker.vercel.app",
+  name: "Trakiti",
+  title: "Trakiti | Real-time Shipment Tracking",
+  url: "https://trakiti.com",
   ogImage:
-    "https://14j7oh8kso.ufs.sh/f/HLxTbDBCDLwfpov6fWR3QgNG9hYzVFo5iLR0yrDPTJedWnBH", // You'll need to update this image
-  description: "Quality shipping Globally",
+    "https://img.freepik.com/free-photo/aerial-view-cargo-ship-cargo-container-harbor_335224-1380.jpg?ga=GA1.1.1036439435.1744115746&semt=ais_hybrid&w=740",
+  description: "Track your shipments with ease and precision worldwide.",
   links: {
-    twitter: "#",
-    github: "#",
-    discord: "#",
-    docs: "#",
+    twitter: "https://twitter.com/trakiti",
+    github: "https://github.com/trakiti",
+    discord: "https://discord.gg/trakiti",
+    docs: "https://trakiti.com/docs",
   },
   contact: {
-    support: "info@greenlinkfreightlogistics.com",
-    sales: "info@greenlinkfreightlogistics.com",
-    phone: "+256 745 331 396",
+    support: "support@trakiti.com",
+    sales: "sales@trakiti.com",
+    phone: "+256 700 000 000", // Replace with Trakiti's actual phone number
   },
-  // features: {
-  //   sms: "Bulk SMS messaging to individuals and groups",
-  //   email: "Email campaigns with analytics and tracking",
-  //   contacts: "Comprehensive contact management system",
-  //   templates: "Customizable message templates",
-  //   automation: "Scheduled and automated messaging",
-  //   analytics: "Detailed delivery and engagement analytics",
-  //   integration: "API integrations with your existing tools",
-  //   compliance: "GDPR and privacy compliance tools",
-  // },
 };
 
 export type SiteConfig = typeof siteConfig;
