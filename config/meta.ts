@@ -1,8 +1,8 @@
 export const siteConfig = {
-  name: "Hubstack Starter kit",
-  shortName: "HSK",
+  name: "Trakiti Shipment Tracker",
+  shortName: "Trakiti",
   description:
-    "Providing exceptional healthcare services with compassion and expertise since 2008. Our commitment to excellence has made us a trusted healthcare provider in the region.",
+    "Reliable and real-time shipment tracking solutions for businesses and individuals worldwide. Stay informed every step of the way with Trakiti.",
 
   // Contact Information
   contact: {
@@ -12,56 +12,56 @@ export const siteConfig = {
       whatsapp: "+256(0) 762063160",
     },
     email: {
-      primary: "jb@desishub.com",
-      support: "info@desishub.com",
-      appointments: "jb@desishub.com",
+      primary: "support@trakiti.com",
+      support: "info@trakiti.com",
+      appointments: "contact@trakiti.com",
     },
     address: {
-      street: "P.O.Box 430337",
-      city: "Kasese",
+      street: "Plot 21 Logistics Park",
+      city: "Kampala",
       country: "Uganda",
       coordinates: {
-        latitude: "0.11111",
-        longitude: "30.11111",
+        latitude: "0.347596",
+        longitude: "32.582520",
       },
     },
   },
 
   // Social Media Links
   social: {
-    facebook: "https://facebook.com/kasesehospital",
-    twitter: "https://twitter.com/kasesehospital",
-    instagram: "https://instagram.com/kasesehospital",
-    linkedin: "https://linkedin.com/company/kasesehospital",
-    youtube: "https://youtube.com/kasesehospital",
+    facebook: "https://facebook.com/trakiti",
+    twitter: "https://twitter.com/trakiti",
+    instagram: "https://instagram.com/trakiti",
+    linkedin: "https://linkedin.com/company/trakiti",
+    youtube: "https://youtube.com/@trakiti",
   },
 
   // Working Hours
   workingHours: {
     status: "24/7 All Week Days",
-    emergency: "24/7 Emergency Services",
-    outpatient: "Monday - Saturday: 8:00 AM - 5:00 PM",
-    pharmacy: "24/7 Pharmacy Services",
-    laboratory: "24/7 Laboratory Services",
+    emergency: "24/7 Customer Support",
+    outpatient: "Monday - Saturday: 9:00 AM - 6:00 PM", // Optional adjustment
+    pharmacy: "N/A",
+    laboratory: "N/A",
   },
 
   // Company Meta Information
   meta: {
-    foundedYear: 2008,
-    license: "Licensed by Uganda Medical and Dental Practitioners Council",
-    accreditation: "Internationally Accredited Healthcare Facility",
+    foundedYear: 2021,
+    license: "Licensed by Uganda Communications Commission",
+    accreditation: "Certified Logistics Tech Provider",
     values: [
       {
-        title: "Excellence",
-        description: "Committed to providing the highest quality healthcare",
+        title: "Transparency",
+        description: "Providing real-time, accurate tracking updates.",
       },
       {
-        title: "Compassion",
-        description: "Treating every patient with care and empathy",
+        title: "Efficiency",
+        description: "Streamlining logistics through technology.",
       },
       {
-        title: "Innovation",
-        description: "Embracing modern medical technologies and practices",
+        title: "Trust",
+        description: "Building long-term relationships through reliability.",
       },
     ],
   },
@@ -69,83 +69,80 @@ export const siteConfig = {
   // Service Categories
   services: {
     emergency: [
-      "24/7 Emergency Care",
-      "Ambulance Services",
-      "Trauma Care",
-      "Critical Care",
+      "Lost Shipment Assistance",
+      "24/7 Live Support",
+      "Urgent Tracking Updates",
+      "Priority Escalation Services",
     ],
     specialties: [
-      "Obstetrics & Gynecology",
-      "Surgery Department",
-      "Medical Department",
-      "Laboratory Department",
-      "Imaging Department",
-      "Pediatrics Department",
-      "Outpatient Department",
+      "Real-Time Tracking",
+      "International Shipment Monitoring",
+      "Local Courier Integration",
+      "Delivery Notifications",
+      "Proof of Delivery",
     ],
     supportServices: [
-      "Pharmacy",
-      "Laboratory",
-      "Radiology",
-      "Physical Therapy",
-      "Nutritional Counseling",
+      "Customer Dashboard",
+      "Mobile App Support",
+      "Custom Notifications",
+      "API Integrations",
+      "Data Analytics & Reporting",
     ],
   },
 
   // SEO and Metadata
   seo: {
-    title: "Kasese Hospital - Excellence in Healthcare",
+    title: "Trakiti - Real-Time Shipment Tracking Made Easy",
     description:
-      "Leading healthcare provider in Kasese offering comprehensive medical services, emergency care, and specialized treatments.",
+      "Trakiti offers global shipment tracking solutions, real-time updates, and smart logistics tools for personal and business use.",
     keywords: [
-      "hospital",
-      "healthcare",
-      "medical services",
-      "emergency care",
-      "Kasese",
+      "shipment tracking",
+      "logistics",
+      "real-time tracking",
+      "courier tracking",
+      "delivery updates",
+      "Trakiti",
+      "track package",
       "Uganda",
-      "doctors",
-      "specialists",
     ],
-    ogImage: "https://kasesehospital.org/og-image.jpg",
+    ogImage: "https://img.freepik.com/free-photo/aerial-view-cargo-ship-cargo-container-harbor_335224-1380.jpg?ga=GA1.1.1036439435.1744115746&semt=ais_hybrid&w=740",
   },
 
   // Legal Information
   legal: {
-    name: "Kasese Hospital Ltd",
-    registration: "UG123456789",
+    name: "Trakiti Logistics Ltd",
+    registration: "UG987654321",
     privacyPolicy: "/privacy-policy",
     terms: "/terms-and-conditions",
     accessibility: "/accessibility",
   },
 
-  // Appointment Types
+  // Appointment Types (adjusted to service requests)
   appointmentTypes: [
     {
-      id: "general",
-      name: "General Consultation",
+      id: "demo",
+      name: "Product Demo",
       duration: "30 minutes",
     },
     {
-      id: "specialist",
-      name: "Specialist Consultation",
+      id: "consultation",
+      name: "Logistics Consultation",
       duration: "45 minutes",
     },
     {
-      id: "followup",
-      name: "Follow-up Visit",
+      id: "support",
+      name: "Technical Support Call",
       duration: "20 minutes",
     },
   ],
 
-  // Insurance and Payment
+  // Insurance and Payment (adjusted to logistics context)
   insurance: {
     accepted: [
-      "National Health Insurance",
-      "Private Insurance Companies",
-      "Corporate Medical Schemes",
+      "Shipment Insurance Partners",
+      "Logistics Protection Plans",
     ],
-    paymentMethods: ["Cash", "Credit Card", "Mobile Money", "Insurance"],
+    paymentMethods: ["Credit Card", "Mobile Money", "Bank Transfer"],
   },
 };
 
