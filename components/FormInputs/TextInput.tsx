@@ -118,7 +118,7 @@ export default function TextInput({
             {...register(`${name}`, getValidationRules())}
             style={{ paddingLeft: getPaddingLeft() }}
             className={cn(
-              "block w-full rounded-md border-0 py-2 text-gray-500 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-indigo-600  sm:leading-6 ",
+              "block w-full rounded-md border-0 py-2 text-gray-500 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-indigo-600  sm:leading-6 border-gray-200 bg-gray-50 focus:border-[#0f2557] focus:ring-[#0f2557]/20",
               errors[`${name}`] && "focus:ring-red-500"
             )}
             placeholder={type == "text" ? placeholder || label : placeholder}

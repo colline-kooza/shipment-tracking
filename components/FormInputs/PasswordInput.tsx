@@ -88,7 +88,7 @@ export default function PasswordInput({
               },
             })}
             className={cn(
-              "block w-full rounded-md border-0 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 text-sm",
+              "block w-full rounded-md border-0 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 text-sm border-gray-200 bg-gray-50 focus:border-[#0f2557] focus:ring-[#0f2557]/20",
               (errors[name] && "focus:ring-red-500 pl-8") || (icon && "pl-8")
             )}
             placeholder={placeholder || label}

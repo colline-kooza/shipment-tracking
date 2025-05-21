@@ -252,9 +252,12 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
           
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                Shipment {shipment.reference}
-              </h1>
+             <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                  {shipment.trackingNumber
+                    ? `Tracking Number: ${shipment.trackingNumber}`
+                    : `Reference Number: ${shipment.reference}`}
+                </h1>
+
               <div className="flex items-center gap-3">
                 <StatusBadge status={shipment.status} />
                 <span className="text-sm text-gray-500">
@@ -475,7 +478,7 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
               <Card>
                 <div className="p-6">
                   <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-base font-semibold text-gray-900">Required Documents</h3>
+                    <h3 className="text-base font-semibold text-gray-900">Approved Documents</h3>
                     <div className="text-sm text-gray-500">
                       {completedDocs}/{totalRequiredDocs} Complete
                     </div>
@@ -537,9 +540,13 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
           <div>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900 mb-1">Document Management</h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-1">
+                Document Management ({shipment.documents.length})
+              </h2>
+
+
                 <p className="text-sm text-gray-600">
-                  {completedDocs} of {totalRequiredDocs} required documents verified
+                  {completedDocs} of {shipment.documents.length}  documents verified
                 </p>
               </div>
               <Button 
@@ -734,6 +741,7 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
         isSubmitting={createDocumentMutation.isPending}
         shipmentReference={shipment?.reference}
         isReference={false}
+         documents={shipment.documents} 
       />
     </div>
   );

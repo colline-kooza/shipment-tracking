@@ -195,7 +195,7 @@ export default function ShipmentsList() {
                 : "Create your first shipment to get started"}
             </p>
             
-            <Link className='flex items-center justify-center' href="/dashboard/shipments/new">
+            <Link className='flex items-center justify-center' href="/dashboard/shipments-trakit/new">
               <Button className="mt-4 flex items-center gap-2">
                 <Plus size={16} />
                 New Shipment
@@ -207,9 +207,7 @@ export default function ShipmentsList() {
         <>
           <div className="grid grid-cols-1 gap-4">
             {data.shipments.map(shipment => (
-              <Link href={`/dashboard/shipments-trakit/${shipment.id}`} key={shipment.id}>
-                <ShipmentCard shipment={shipment} />
-              </Link>
+                <ShipmentCard shipment={shipment} key={shipment.id}/>
             ))}
           </div>
 

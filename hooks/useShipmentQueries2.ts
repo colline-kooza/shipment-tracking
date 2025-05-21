@@ -57,7 +57,7 @@ export function useCreateShipment() {
     onSuccess: (response) => {
       if (response.success) {
         toast.success("Shipment created successfully", {
-          description: `Reference: ${response.data?.reference}`,
+          description: `Tracking Number: ${response.data?.trackingNumber}`,
         });
         // Invalidate shipments list to trigger a refetch
         queryClient.invalidateQueries({ queryKey: shipmentKeys.lists() });

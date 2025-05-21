@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
   Package, 
@@ -36,6 +36,7 @@ interface FormData {
   type: ShipmentType;
   client: string;
   reference: string;
+  trackingNumber: string;
   origin: string;
   destination: string;
   arrivalDate: string;
@@ -57,6 +58,7 @@ const NewShipment: React.FC = () => {
     type: 'SEA',
     client: '',
     reference: '',
+    trackingNumber: '',
     origin: '',
     destination: '',
     arrivalDate: '',
@@ -74,6 +76,66 @@ const NewShipment: React.FC = () => {
     { id: 'documents', label: 'Required Documents', icon: <FileText size={18} /> },
     { id: 'review', label: 'Review & Submit', icon: <Check size={18} /> }
   ];
+
+  // Generate tracking number and default reference number when shipment type changes
+  useEffect(() => {
+    generateTrackingNumber(formData.type);
+    generateDefaultReferenceNumber(formData.type);
+  }, [formData.type]);
+
+  // Generate tracking number based on shipment type
+  const generateTrackingNumber = (shipmentType: ShipmentType) => {
+    const date = new Date();
+    const year = date.getFullYear().toString().slice(-2);
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    const randomNum = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    
+    let prefix = '';
+    switch (shipmentType) {
+      case 'SEA':
+        prefix = 'SEA';
+        break;
+      case 'AIR':
+        prefix = 'AIR';
+        break;
+      case 'ROAD':
+        prefix = 'RD';
+        break;
+    }
+    
+    const trackingNumber = `${prefix}-${year}${month}${day}-${randomNum}`;
+    setFormData(prev => ({ ...prev, trackingNumber }));
+  };
+
+  // Generate default reference number based on shipment type
+  const generateDefaultReferenceNumber = (shipmentType: ShipmentType) => {
+    const date = new Date();
+    const year = date.getFullYear().toString().slice(-2);
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    const randomChars = Math.random().toString(36).substring(2, 5).toUpperCase();
+    
+    let prefix = '';
+    switch (shipmentType) {
+      case 'SEA':
+        prefix = 'S';
+        break;
+      case 'AIR':
+        prefix = 'A';
+        break;
+      case 'ROAD':
+        prefix = 'R';
+        break;
+    }
+    
+    const reference = `REF-${prefix}${year}${month}-${randomChars}`;
+    
+    // Only set default reference if the user hasn't entered one yet or if they're changing the shipment type
+    if (!formData.reference || formData.type !== shipmentType) {
+      setFormData(prev => ({ ...prev, reference }));
+    }
+  };
 
   // Validation function for each step
   const validateStep = (step: Step): boolean => {
@@ -206,18 +268,26 @@ const NewShipment: React.FC = () => {
      if (!validateStep('review')) {
     return;
   }
+  let originValue = formData.origin;
+  if (formData.type === 'SEA') {
+    originValue = 'Mombasa Port';
+  } else if (formData.type === 'AIR') {
+    originValue = 'Juba International Airport';
+  }
 
   const shipmentData = {
     type: formData.type,
     client: formData.client,
     reference: formData.reference,
-    origin: formData.origin,
+    trackingNumber: formData.trackingNumber,
+    origin: originValue, 
     destination: formData.destination,
     arrivalDate: new Date(formData.arrivalDate), 
     container: formData.type === 'SEA' ? formData.container : undefined,
     truck: formData.type !== 'AIR' ? formData.truck : undefined,
     documents: formData.documents 
   };
+
   console.log(shipmentData , "these are shipment data")
 
   createShipment(shipmentData, {
@@ -345,6 +415,21 @@ const NewShipment: React.FC = () => {
                     placeholder="Enter reference number"
                   />
                   {errors.reference && <p className="text-red-500 text-xs mt-1">{errors.reference}</p>}
+                </div>
+              </div>
+
+              <div className="space-y-2 disabled cursor-not-allowed">
+                <label className="block text-sm font-medium text-gray-700">Generated Tracking Number</label>
+                <div className="relative rounded-md shadow-sm">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Package className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type="text"
+                    value={formData.trackingNumber}
+                    disabled
+                    className="bg-gray-50 block w-full pl-10 sm:text-sm border-gray-300 rounded-md py-2 border disabled cursor-not-allowed"
+                  />
                 </div>
               </div>
 
@@ -540,6 +625,9 @@ const NewShipment: React.FC = () => {
                         <span className="font-medium">Reference:</span> {formData.reference || 'Not provided'}
                       </p>
                       <p className="text-sm text-gray-500">
+                        <span className="font-medium">Tracking Number:</span> {formData.trackingNumber}
+                      </p>
+                      <p className="text-sm text-gray-500">
                         <span className="font-medium">Client:</span> {formData.client || 'Not provided'}
                       </p>
                     </div>
@@ -569,7 +657,7 @@ const NewShipment: React.FC = () => {
     <CalendarIcon className="h-5 w-5 text-blue-500" />
   </div>
   <div className="ml-3">
-    <p className="text-sm font-medium text-gray-900">
+    <p className=" text-sm font-medium text-gray-900">
       Arrival Information
     </p>
     <p className="text-sm text-gray-500 mt-1">

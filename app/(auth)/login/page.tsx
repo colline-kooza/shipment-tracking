@@ -12,7 +12,7 @@ export default async function page() {
   }
   return (
     <GridBackground>
-      <div className="px-4">
+      <div className="">
         <LoginForm />
       </div>
     </GridBackground>

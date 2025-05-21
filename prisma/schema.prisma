@@ -108,6 +108,7 @@ model Customer {
 model Shipment {
   id             String          @id @default(cuid())
   reference      String          @unique
+  trackingNumber String?         @unique
   type           ShipmentType
   client         String
   origin         String

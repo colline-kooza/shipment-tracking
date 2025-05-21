@@ -3,6 +3,7 @@
 import { db } from "@/prisma/db";
 import { getAuthUser } from "@/config/useAuth";
 import { ShipmentStatus, ShipmentType, DocumentStatus } from "@prisma/client";
+import { Truculenta } from "next/font/google";
 
 export type ApiResponse<T> = {
   success: boolean;
@@ -20,6 +21,7 @@ export type DashboardStats = {
 export type ShipmentListItem = {
   id: string;
   reference: string;
+  trackingNumber: string;
   type: ShipmentType;
   client: string;
   origin: string;
@@ -136,6 +138,7 @@ export async function getRecentShipments(limit: number = 4): Promise<ApiResponse
         createdAt: true,
         updatedAt: true,
         invoiceStatus: true,
+        trackingNumber:true
       },
       orderBy: {
         createdAt: 'desc',

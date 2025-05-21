@@ -153,7 +153,7 @@ const RecentShipments = () => {
     <div>
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-medium text-gray-900">Recent Shipments</h2>
-        <Link href="/shipments">
+        <Link href="/shipments-trakit">
           <Button 
             variant="outline" 
             size="sm"
@@ -186,7 +186,7 @@ const QuickActions = () => {
           <Link href="/shipments-trakit/new">
             <Button className="w-full bg-[#0f2557]">Create New Shipment</Button>
           </Link>
-          <Link href="/documents">
+          <Link href="/dashboard/documents">
             <Button variant="secondary" className="w-full bg-[#1a91a1] text-white hover:text-black">Upload Documents</Button>
           </Link>
           <Link href="/reports">

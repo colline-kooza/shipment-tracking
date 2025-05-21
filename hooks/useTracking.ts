@@ -55,18 +55,18 @@ export function useShipment(id: string) {
 /**
  * Hook for tracking a shipment by reference number (public)
  */
-export function useShipmentTracking(reference: string) {
+export function useShipmentTracking(trackingNumber: string) {
   return useQuery({
-    queryKey: shipmentKeys.trackByRef(reference),
+    queryKey: shipmentKeys.trackByRef(trackingNumber),
     queryFn: async () => {
-      const response = await getShipmentByReference(reference);
+      const response = await getShipmentByReference(trackingNumber);
       if (!response.success) {
         throw new Error(response.error || "Failed to track shipment");
       }
       return response.data;
     },
     staleTime: 1000 * 30, // 30 seconds - very short for active tracking
-    enabled: !!reference && reference.length > 0, // Only run if reference is provided
+    enabled: !!trackingNumber && trackingNumber.length > 0, // Only run if reference is provided
   });
 }
 
@@ -122,7 +122,7 @@ export function getStatusLabel(status: ShipmentStatus): string {
 // Helper function to get status color
 export function getStatusColor(status: ShipmentStatus): string {
   const statusMap: Record<ShipmentStatus, string> = {
-    CREATED: "bg-gray-500",
+    CREATED: "bg-red-500",
     DOCUMENT_RECEIVED: "bg-blue-500",
     DOCUMENTS_SENT: "bg-indigo-500",
     CARGO_ARRIVED: "bg-purple-500",

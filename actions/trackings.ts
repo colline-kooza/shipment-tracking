@@ -278,15 +278,27 @@ export async function createTrackingEvent(data: TrackingEventInput): Promise<Api
   }
 }
 
-/**
- * Get shipment by reference number (public tracking)
- */
-export async function getShipmentByReference(reference: string): Promise<ApiResponse<any>> {
+
+export async function getShipmentByReference(trackingNumber: string): Promise<ApiResponse<any>> {
   try {
     // No auth required for public tracking
     const shipment = await db.shipment.findFirst({
-      where: { reference },
-      include: {
+      where: { trackingNumber },
+      select: {
+        id: true,
+        reference: true,
+        trackingNumber: true,
+        type: true,
+        client: true,
+        origin: true, 
+        destination: true,
+        status: true,
+        container: true,
+        truck: true,
+        arrivalDate: true,
+        createdAt: true,
+        updatedAt: true,
+        invoiceStatus: true,
         timeline: {
           orderBy: {
             timestamp: 'desc',
@@ -319,7 +331,7 @@ export async function getShipmentByReference(reference: string): Promise<ApiResp
     if (!shipment) {
       return {
         success: false,
-        error: "Shipment not found with the provided reference number",
+        error: "Shipment not found with the provided tracking number",
         data: null,
       };
     }
@@ -329,7 +341,7 @@ export async function getShipmentByReference(reference: string): Promise<ApiResp
       data: shipment,
     };
   } catch (error) {
-    console.error("Failed to fetch shipment by reference:", error);
+    console.error("Failed to fetch shipment by tracking number:", error);
     return {
       success: false,
       error: "Failed to fetch shipment: " + (error as Error).message,

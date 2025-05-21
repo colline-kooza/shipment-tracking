@@ -236,7 +236,7 @@ export default function TrackingPage() {
                     </div>
                     <div>
                       <p className="text-sm font-medium opacity-80">Tracking Number</p>
-                      <h2 className="text-xl font-bold">{shipment.reference}</h2>
+                      <h2 className="text-xl font-bold">{shipment.referenceNumber}</h2>
                     </div>
                   </div>
                   
@@ -256,8 +256,8 @@ export default function TrackingPage() {
                     </div>
                   </div>
                   
-                  <div className="flex justify-center items-center text-gray-400">
-                    <ArrowRight className="hidden md:block h-5 w-5" />
+                  <div className="flex justify-center items-center text-blue-400">
+                    <ArrowRight className="hidden md:block h-8 w-8 text-2xl" />
                   </div>
                   
                   <div className="flex items-start">

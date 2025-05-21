@@ -1,6 +1,6 @@
-import React from 'react';
-import { Calendar, MapPin, Package, User, Truck, Ship, Plane } from 'lucide-react';
-import { Shipment, ShipmentType } from '@/types/shipments';
+import React, { useState } from 'react';
+import { Calendar, MapPin, Package, User, Truck, Ship, Plane, Clipboard, CheckCircle } from 'lucide-react';
+import { ShipmentType } from '@/types/shipments';
 import { Card } from '@/components/ui/card';
 import Link from 'next/link';
 import StatusBadge from '@/components/status-badge';
@@ -12,7 +12,8 @@ interface ShipmentCardProps {
 }
 
 export const ShipmentCard: React.FC<ShipmentCardProps> = ({ shipment }) => {
-  // Get the appropriate icon based on shipment type
+  const [copied, setCopied] = useState(false);
+
   const getTransportIcon = () => {
     switch (shipment.type) {
       case ShipmentType.SEA:
@@ -26,17 +27,29 @@ export const ShipmentCard: React.FC<ShipmentCardProps> = ({ shipment }) => {
     }
   };
 
+  const copyToClipboard = () => {
+    if (shipment.trackingNumber) {
+      navigator.clipboard.writeText(shipment.trackingNumber)
+        .then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000); // Reset after 2 seconds
+        })
+        .catch(err => {
+          console.error('Failed to copy: ', err);
+        });
+    }
+  };
+
   return (
     <Card className="hover:shadow-md transition-shadow duration-200">
       <div className="p-6">
         <div className="flex justify-between items-start mb-4">
           <div className="flex-1">
-            <Link 
-              href={`/dashboard/shipments-trakit/${shipment.id}`} 
+            <div
               className="text-sm font-semibold text-blue-700 hover:text-blue-800 transition-colors line-clamp-1"
             >
               {shipment.reference}
-            </Link>
+            </div>
             <div className="mt-2 flex items-center text-sm text-gray-600">
               <User size={16} className="mr-2 text-gray-400" /> 
               <span>{shipment.client}</span>
@@ -44,6 +57,29 @@ export const ShipmentCard: React.FC<ShipmentCardProps> = ({ shipment }) => {
           </div>
           <StatusBadge status={shipment.status} />
         </div>
+        
+        {shipment.trackingNumber && (
+          <div 
+            className="flex items-center justify-between bg-blue-50 p-3 rounded-md mb-4 cursor-pointer hover:bg-blue-100 transition-colors"
+            onClick={copyToClipboard}
+            title="Click to copy tracking number"
+          >
+            <div className="flex items-center flex-1 overflow-hidden">
+              <Package size={16} className="mr-2 text-blue-600 flex-shrink-0" />
+              <div className="mr-2 text-sm font-medium text-gray-700">Tracking:</div>
+              <div className="text-sm font-mono text-blue-700 truncate">
+                {shipment.trackingNumber}
+              </div>
+            </div>
+            <div className="ml-2 p-1">
+              {copied ? (
+                <CheckCircle size={18} className="text-green-500" />
+              ) : (
+                <Clipboard size={18} className="text-gray-500" />
+              )}
+            </div>
+          </div>
+        )}
         
         <div className="space-y-3 mb-4">
           <div className="flex items-center text-sm text-gray-600">

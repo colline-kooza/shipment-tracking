@@ -25,18 +25,10 @@ import {
 import { signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { AuthUser } from "@/config/useAuth";
 
-interface UserDropdownProps {
-  username: string;
-  email: string;
-  avatarUrl?: string;
-}
 
-export function UserDropdownMenu({
-  username,
-  email,
-  avatarUrl,
-}: UserDropdownProps) {
+export function UserDropdownMenu(userData: AuthUser) {
   const router = useRouter();
   async function handleLogout() {
     try {
@@ -55,14 +47,14 @@ export function UserDropdownMenu({
           className="relative h-12 w-full justify-start gap-2 px-4"
         >
           <Avatar className="hidden md:flex h-10 w-10 border-2 border-indigo-200 dark:border-indigo-800 shadow">
-            <AvatarImage src={avatarUrl} alt={username} />
+            <AvatarImage src={userData.image} alt={userData.name} />
             <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-medium text-lg">
-              {getInitials(username)}
+              {getInitials(userData.name)}
             </AvatarFallback>
           </Avatar>
           <div className="flex flex-col items-start">
-            <span className="text-sm font-medium">{username}</span>
-            <span className="text-xs text-muted-foreground">{email}</span>
+            <span className="text-sm font-medium">{userData.name}</span>
+            <span className="text-xs text-muted-foreground">{userData.email}</span>
           </div>
           <ChevronsUpDown className="ml-auto h-4 w-4 shrink-0 opacity-50" />
         </Button>

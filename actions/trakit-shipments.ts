@@ -20,6 +20,7 @@ export type CreateShipmentDTO = {
   type: ShipmentType;
   client: string;
   reference?: string;
+  trackingNumber?: string;
   origin: string;
   destination: string;
   arrivalDate: Date;
@@ -40,6 +41,7 @@ export type ShipmentFilters = {
 export type ShipmentListItem = {
   id: string;
   reference: string;
+  trackingNumber: string | null;
   client: string;
   origin: string;
   destination: string;
@@ -89,6 +91,7 @@ export async function createShipment(data: CreateShipmentDTO) {
         arrivalDate: data.arrivalDate,
         container: data.container,
         truck: data.truck,
+        trackingNumber:data.trackingNumber,
         creator: {
           connect: { id: user.id } // Ensure proper relation connection
         },
@@ -215,15 +218,14 @@ export async function getShipments(filters: ShipmentFilters = {}): Promise<Shipm
     where.status = status;
   }
   
-  // Add search conditions if searchQuery exists
   if (searchQuery) {
     where.OR = [
       { reference: { contains: searchQuery, mode: 'insensitive' } },
       { client: { contains: searchQuery, mode: 'insensitive' } },
+      { trackingNumber: { contains: searchQuery, mode: 'insensitive' } } 
     ];
   }
   
-  // Get total count for pagination
   const totalCount = await db.shipment.count({ where });
   
   // Sort order mapping
@@ -232,12 +234,9 @@ export async function getShipments(filters: ShipmentFilters = {}): Promise<Shipm
   if (sortBy === 'date') {
     orderBy.createdAt = sortOrder;
   } else {
-    // Status sorting requires more advanced handling in-memory
-    // We'll still use createdAt as the database sort, then sort by status in JS
     orderBy.createdAt = sortOrder;
   }
   
-  // Fetch shipments with selected fields only (optimized)
   let shipments = await db.shipment.findMany({
     where,
     select: {
@@ -252,6 +251,7 @@ export async function getShipments(filters: ShipmentFilters = {}): Promise<Shipm
       truck: true,
       createdAt: true,
       type: true,
+      trackingNumber: true
     },
     orderBy,
     skip,
