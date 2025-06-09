@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Plus, Search, Filter, Mail, User, MapPin, Shield, Check, Loader2 } from 'lucide-react';
+import { Plus, Search, Filter, Mail, User, MapPin, Shield, Check, Loader2, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -16,24 +16,70 @@ import {
 } from '@/components/ui/dialog';
 import { getRolePermissions, Permission } from '@/utils/permissions';
 import { UserRole } from '@prisma/client';
-import { createUser } from '@/actions/newUsers';
+import { createUser, updateUser } from '@/actions/newUsers';
 import { toast } from 'sonner';
 
 // Type definitions
-type User = { id: string; name: string; email: string; role: UserRole; location: string | null; permissions: Permission[]; };
+type User = { 
+  id: string; 
+  name: string; 
+  firstName?: string;
+  lastName?: string;
+  email: string; 
+  phone?: string;
+  role: UserRole; 
+  location: string | null; 
+  permissions: Permission[]; 
+};
 
-export default function UsersComponent({users}:{users:User[]}) {
-  // Remove isLoading state since we're getting users directly as a prop
+
+type NewUserData = {
+  name: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  phone: string;
+  role: UserRole;
+  location: string;
+};
+
+type EditUserData = {
+  id: string;
+  name: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  role: UserRole;
+  location: string;
+};
+
+export default function UsersComponent({users}:{users: User[]}) {
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [showAddUser, setShowAddUser] = useState(false);
+  const [showEditUser, setShowEditUser] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [newUser, setNewUser] = useState({
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  
+  const [newUser, setNewUser] = useState<NewUserData>({
     name: '',
     firstName: '',
     lastName: '',
     email: '',
     password: '',
+    phone: '',
+    role: 'USER' as UserRole,
+    location: ''
+  });
+
+  const [editUser, setEditUser] = useState<EditUserData>({
+    id: '',
+    name: '',
+    firstName: '',
+    lastName: '',
+    email: '',
     phone: '',
     role: 'USER' as UserRole,
     location: ''
@@ -86,6 +132,62 @@ export default function UsersComponent({users}:{users:User[]}) {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleEditUser = async () => {
+    if (!selectedUser) return;
+    
+    setIsSubmitting(true);
+    
+    try {
+      // Create fullName from firstName and lastName
+      const fullName = `${editUser.firstName} ${editUser.lastName}`.trim();
+      
+      const result = await updateUser({
+        ...editUser,
+        name: fullName
+      });
+      
+      if (result.success) {
+        toast.success("User updated successfully!");
+        
+        // Close modal and reset state
+        setShowEditUser(false);
+        setSelectedUser(null);
+        setEditUser({
+          id: '',
+          name: '',
+          firstName: '',
+          lastName: '',
+          email: '',
+          phone: '',
+          role: 'USER',
+          location: ''
+        });
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      console.error('Failed to update user:', error);
+      toast.error('Failed to update user. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const openEditModal = (user: User) => {
+    setSelectedUser(user);
+    setEditUser({
+      id: user.id,
+      name: user.name,
+      firstName: user.firstName ?? '',
+      lastName: user.lastName ?? '',
+      email: user.email,
+      phone: user.phone ?? '',
+      role: user.role,
+      location: user.location || ''
+    });
+    setShowEditUser(true);
   };
 
   const getRoleBadgeColor = (role: string) => {
@@ -338,6 +440,167 @@ export default function UsersComponent({users}:{users:User[]}) {
         </DialogContent>
       </Dialog>
 
+      {/* Edit User Modal */}
+      <Dialog open={showEditUser} onOpenChange={setShowEditUser}>
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+            <DialogDescription>
+              Update the user information below.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  First Name
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <User className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <Input
+                    type="text"
+                    className="pl-10"
+                    value={editUser.firstName}
+                    onChange={(e) => setEditUser({ ...editUser, firstName: e.target.value })}
+                    placeholder="First name"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Last Name
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <User className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <Input
+                    type="text"
+                    className="pl-10"
+                    value={editUser.lastName}
+                    onChange={(e) => setEditUser({ ...editUser, lastName: e.target.value })}
+                    placeholder="Last name"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Email Address
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Mail className="h-5 w-5 text-gray-400" />
+                </div>
+                <Input
+                  type="email"
+                  className="pl-10"
+                  value={editUser.email}
+                  onChange={(e) => setEditUser({ ...editUser, email: e.target.value })}
+                  placeholder="Email address"
+                />
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Phone Number
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Mail className="h-5 w-5 text-gray-400" />
+                </div>
+                <Input
+                  type="tel"
+                  className="pl-10"
+                  value={editUser.phone}
+                  onChange={(e) => setEditUser({ ...editUser, phone: e.target.value })}
+                  placeholder="Phone number"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Role
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Shield className="h-5 w-5 text-gray-400" />
+                </div>
+                <select
+                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  value={editUser.role}
+                  onChange={(e) => setEditUser({ ...editUser, role: e.target.value as UserRole })}
+                >
+                  <option value="USER">Client</option>
+                  <option value="STAFF">Staff</option>
+                  <option value="AGENT">Agent</option>
+                  <option value="ADMIN">Admin</option>
+                </select>
+              </div>
+              
+              {/* Show permissions for selected role */}
+              <div className="mt-2">
+                <p className="text-xs text-gray-500 mb-2">Permissions for this role:</p>
+                <div className="space-y-1">
+                  {getRolePermissions(editUser.role.toLowerCase()).map(permission => (
+                    <div key={permission} className="flex items-center text-sm text-gray-600">
+                      <Check size={14} className="mr-1 text-green-500" />
+                      {getPermissionLabel(permission)}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Location
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <MapPin className="h-5 w-5 text-gray-400" />
+                </div>
+                <Input
+                  type="text"
+                  className="pl-10"
+                  value={editUser.location}
+                  onChange={(e) => setEditUser({ ...editUser, location: e.target.value })}
+                  placeholder="Enter location (optional)"
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowEditUser(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleEditUser}
+              disabled={isSubmitting || !editUser.firstName || !editUser.lastName || !editUser.email || !editUser.phone}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 size={16} className="mr-2 animate-spin" />
+                  Updating...
+                </>
+              ) : 'Update User'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Users Grid */}
       {!users || users.length === 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -409,8 +672,9 @@ export default function UsersComponent({users}:{users:User[]}) {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => console.log('Edit user:', user.id)}
+                    onClick={() => openEditModal(user)}
                   >
+                    <Edit size={14} className="mr-1" />
                     Edit User
                   </Button>
                 </div>

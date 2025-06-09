@@ -105,7 +105,8 @@ export const siteConfig = {
       "track package",
       "Uganda",
     ],
-    ogImage: "https://img.freepik.com/free-photo/aerial-view-cargo-ship-cargo-container-harbor_335224-1380.jpg?ga=GA1.1.1036439435.1744115746&semt=ais_hybrid&w=740",
+    ogImage:
+      "https://img.freepik.com/free-photo/aerial-view-cargo-ship-cargo-container-harbor_335224-1380.jpg?ga=GA1.1.1036439435.1744115746&semt=ais_hybrid&w=740",
   },
 
   // Legal Information
@@ -138,10 +139,7 @@ export const siteConfig = {
 
   // Insurance and Payment (adjusted to logistics context)
   insurance: {
-    accepted: [
-      "Shipment Insurance Partners",
-      "Logistics Protection Plans",
-    ],
+    accepted: ["Shipment Insurance Partners", "Logistics Protection Plans"],
     paymentMethods: ["Credit Card", "Mobile Money", "Bank Transfer"],
   },
 };

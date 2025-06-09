@@ -113,9 +113,9 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: siteConfig.url,
     title: siteConfig.name,
-    description: siteConfig.description,
+description: siteConfig.description,
     siteName: siteConfig.name,
-    images: [
+images: [
       {
         url: siteConfig.ogImage,
         width: 1200,

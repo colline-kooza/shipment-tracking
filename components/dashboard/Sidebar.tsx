@@ -14,6 +14,7 @@ import {
   Anchor,
   PlaneLanding,
   MessageCircle,
+  MessageCircleCode,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -56,12 +57,19 @@ const navItems = [
     icon: <Truck size={20} />,
     roles: ["ADMIN", "STAFF", "AGENT", "USER"]
   },
+    { 
+    name: "Alert Panel", 
+    path: "/dashboard/panel", 
+    icon: <MessageCircleCode size={20} />,
+    roles: ["ADMIN"]
+  },
   { 
     name: "Notifications", 
     path: "/dashboard/notifications", 
     icon: <MessageCircle size={20} />,
     roles: ["ADMIN", "STAFF", "AGENT", "USER"]
   },
+
   { 
     name: "Users", 
     path: "/dashboard/users", 

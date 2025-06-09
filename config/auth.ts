@@ -1,14 +1,10 @@
-import { AuthOptions, NextAuthOptions } from "next-auth";
-// import { PrismaAdapter } from "@auth/prisma-adapter";
+import { NextAuthOptions } from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
-
-import GoogleProvider from "next-auth/providers/google";
-import GitHubProvider from "next-auth/providers/github";
 import type { Adapter } from "next-auth/adapters";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
 import { db } from "@/prisma/db";
-// more providers at https://next-auth.js.org/providers
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(db) as Adapter,
   secret: process.env.NEXTAUTH_SECRET,
@@ -27,16 +23,10 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         try {
-          // console.log(
-          //   "Authorize function called with credentials:",
-          //   credentials
-          // );
-          // Check if user credentials are Correct
           if (!credentials?.email || !credentials?.password) {
             throw { error: "No Inputs Found", status: 401 };
           }
-          // console.log("Pass 1 checked ");
-          //Check if user exists
+
           const existingUser = await db.user.findUnique({
             where: { email: credentials.email },
           });
@@ -50,22 +40,17 @@ export const authOptions: NextAuthOptions = {
             throw { error: "User Not Verified", status: 401 };
           }
 
-          // console.log("Pass 2 Checked");
-          // console.log(existingUser);
           let passwordMatch: boolean = false;
-          //Check if Password is correct
           if (existingUser && existingUser.password) {
-            // if user exists and password exists
             passwordMatch = await compare(
               credentials.password,
               existingUser.password
             );
           }
           if (!passwordMatch) {
-            // console.log("Password incorrect");
             throw { error: "Password Incorrect", status: 401 };
           }
-          // console.log("Pass 3 Checked");
+
           const user = {
             id: existingUser.id,
             name: existingUser.name,
@@ -78,21 +63,17 @@ export const authOptions: NextAuthOptions = {
             orgId: existingUser?.orgId ?? "",
             orgName: existingUser?.orgName ?? "",
           };
-          //
-          // console.log("User Compiled");
-          // console.log(user);
+
           return user;
         } catch (error) {
-          // console.log("aLL Failed");
-          // console.log(error);
           throw { error: "Something went wrong", status: 401 };
         }
       },
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
-      // console.log("JWT callback", { token, user });
+    async jwt({ token, user, trigger, session }) {
+      // If this is a new sign-in, populate the token with user data
       if (user) {
         token.id = user.id;
         token.name = user.name;
@@ -105,10 +86,46 @@ export const authOptions: NextAuthOptions = {
         token.orgId = user.orgId;
         token.orgName = user.orgName;
       }
+
+      // If the session is being updated, fetch fresh user data
+      if (trigger === "update" && token.id) {
+        try {
+          const freshUser = await db.user.findUnique({
+            where: { id: token.id },
+            select: {
+              id: true,
+              name: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              image: true,
+              role: true,
+              phone: true,
+              orgId: true,
+              orgName: true,
+            },
+          });
+
+          if (freshUser) {
+            token.id = freshUser.id;
+            token.name = freshUser.name;
+            token.email = freshUser.email;
+            token.picture = freshUser.image;
+            token.role = freshUser.role;
+            token.firstName = freshUser.firstName;
+            token.lastName = freshUser.lastName;
+            token.phone = freshUser.phone;
+            token.orgId = freshUser.orgId ?? "";
+            token.orgName = freshUser.orgName ?? "";
+          }
+        } catch (error) {
+          console.error("Error fetching fresh user data:", error);
+        }
+      }
+
       return token;
     },
     session({ session, token }) {
-      // console.log("Session callback", { session, token });
       if (session.user && token) {
         session.user.id = token.id;
         session.user.name = token.name;

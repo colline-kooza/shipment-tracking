@@ -13,8 +13,6 @@ import {
   Download,
   Edit,
   Upload,
-  Eye,
-  X,
   Loader2
 } from 'lucide-react';
 import Link from 'next/link';
@@ -43,13 +41,13 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import ShipmentProgress from '@/components/trakit-dashboard/ShipmentProgress';
 import { toast } from 'sonner';
 import { useShipmentById, useUpdateShipmentStatus } from '@/hooks/useShipmentQueries2';
 import FileUploader from '../docs/FileUploader';
 import { DocumentUploadForm } from './DocumentUploadForm';
+import ExportDialog from '../dashboard/export-dialog';
 
 interface ShipmentDetailProps {
   id: string;
@@ -72,7 +70,7 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
   const [selectedDocument, setSelectedDocument] = useState<any>(null);
   const [selectedStatus, setSelectedStatus] = useState<string>('');
   const [statusNotes, setStatusNotes] = useState('');
-  
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false)
   // Upload state
   const [uploadData, setUploadData] = useState<DocumentUpload>({
     type: DocumentType.COMMERCIAL_INVOICE,
@@ -267,7 +265,9 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
             </div>
             
             <div className="flex gap-3">
-              <Button variant="outline" className="flex items-center gap-2 text-xs">
+              <Button variant="outline" className="flex items-center gap-2 text-xs"
+               onClick={() => setIsExportDialogOpen(true)}
+              >
                 <Download className="w-4 h-4" />
                 Export Details
               </Button>
@@ -278,6 +278,7 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
                 <Edit className="w-4 h-4" />
                 Update Status
               </Button>
+               <ExportDialog isOpen={isExportDialogOpen} onOpenChange={setIsExportDialogOpen} shipment={shipment} />
             </div>
           </div>
         </div>

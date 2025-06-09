@@ -1,4 +1,3 @@
-
 "use server";
 
 import { getAuthUser } from "@/config/useAuth";
@@ -33,8 +32,8 @@ export type ShipmentFilters = {
   status?: string;
   page?: number;
   limit?: number;
-  sortBy?: 'date' | 'status';
-  sortOrder?: 'asc' | 'desc';
+  sortBy?: "date" | "status";
+  sortOrder?: "asc" | "desc";
 };
 
 // Minimal shipment type for list view
@@ -51,8 +50,6 @@ export type ShipmentListItem = {
   truck: string | null;
   createdAt: Date;
   type: string;
-  
-  
 };
 
 export type ShipmentListResponse = {
@@ -70,7 +67,7 @@ export type ApiResponse<T> = {
 export async function createShipment(data: CreateShipmentDTO) {
   try {
     const user = await getAuthUser();
-    
+
     if (!user?.id) {
       return {
         success: false,
@@ -79,8 +76,9 @@ export async function createShipment(data: CreateShipmentDTO) {
       };
     }
 
-    const reference = data.reference || await generateShipmentReference(data.type);
-    
+    const reference =
+      data.reference || (await generateShipmentReference(data.type));
+
     const shipment = await db.shipment.create({
       data: {
         reference,
@@ -91,18 +89,18 @@ export async function createShipment(data: CreateShipmentDTO) {
         arrivalDate: data.arrivalDate,
         container: data.container,
         truck: data.truck,
-        trackingNumber:data.trackingNumber,
+        trackingNumber: data.trackingNumber,
         creator: {
-          connect: { id: user.id } // Ensure proper relation connection
+          connect: { id: user.id },
         },
-       
+
         timeline: {
           create: {
-            status: 'CREATED',
+            status: "CREATED",
             notes: `Shipment ${reference} created`,
             createdBy: user.id,
-          }
-        }
+          },
+        },
       },
     });
 
@@ -126,15 +124,15 @@ export async function createShipment(data: CreateShipmentDTO) {
       await db.timelineEvent.create({
         data: {
           shipmentId: shipment.id,
-          status: 'DOCUMENT_RECEIVED',
-          notes: 'Documents uploaded with shipment creation',
+          status: "DOCUMENT_RECEIVED",
+          notes: "Documents uploaded with shipment creation",
           createdBy: user.id,
-        }
+        },
       });
     }
 
-    revalidatePath('/dashboard/shipments');
-    
+    revalidatePath("/dashboard/shipments");
+
     return {
       success: true,
       data: shipment,
@@ -150,11 +148,14 @@ export async function createShipment(data: CreateShipmentDTO) {
   }
 }
 
-
-export async function updateShipmentStatus(id: string, status: string, notes?: string) {
+export async function updateShipmentStatus(
+  id: string,
+  status: string,
+  notes?: string
+) {
   try {
     const user = await getAuthUser();
-    
+
     if (!user?.id) {
       return {
         success: false,
@@ -176,11 +177,11 @@ export async function updateShipmentStatus(id: string, status: string, notes?: s
         status: status as any,
         notes: notes || `Status updated to ${status}`,
         createdBy: user.id,
-      }
+      },
     });
 
     revalidatePath(`/dashboard/shipments/${id}`);
-    revalidatePath('/dashboard/shipments');
+    revalidatePath("/dashboard/shipments");
 
     return {
       success: true,
@@ -197,46 +198,47 @@ export async function updateShipmentStatus(id: string, status: string, notes?: s
   }
 }
 
-
-export async function getShipments(filters: ShipmentFilters = {}): Promise<ShipmentListResponse> {
-  const { 
-    searchQuery = '', 
-    status = 'all', 
-    page = 1, 
+export async function getShipments(
+  filters: ShipmentFilters = {}
+): Promise<ShipmentListResponse> {
+  const {
+    searchQuery = "",
+    status = "all",
+    page = 1,
     limit = 10,
-    sortBy = 'date',
-    sortOrder = 'desc'
+    sortBy = "date",
+    sortOrder = "desc",
   } = filters;
-  
+
   const skip = (page - 1) * limit;
-  
+
   // Base query conditions
   const where: any = {};
-  
+
   // Add status filter if not 'all'
-  if (status !== 'all') {
+  if (status !== "all") {
     where.status = status;
   }
-  
+
   if (searchQuery) {
     where.OR = [
-      { reference: { contains: searchQuery, mode: 'insensitive' } },
-      { client: { contains: searchQuery, mode: 'insensitive' } },
-      { trackingNumber: { contains: searchQuery, mode: 'insensitive' } } 
+      { reference: { contains: searchQuery, mode: "insensitive" } },
+      { client: { contains: searchQuery, mode: "insensitive" } },
+      { trackingNumber: { contains: searchQuery, mode: "insensitive" } },
     ];
   }
-  
+
   const totalCount = await db.shipment.count({ where });
-  
+
   // Sort order mapping
   let orderBy: any = {};
-  
-  if (sortBy === 'date') {
+
+  if (sortBy === "date") {
     orderBy.createdAt = sortOrder;
   } else {
     orderBy.createdAt = sortOrder;
   }
-  
+
   let shipments = await db.shipment.findMany({
     where,
     select: {
@@ -251,15 +253,15 @@ export async function getShipments(filters: ShipmentFilters = {}): Promise<Shipm
       truck: true,
       createdAt: true,
       type: true,
-      trackingNumber: true
+      trackingNumber: true,
     },
     orderBy,
     skip,
     take: limit,
   });
-  
+
   // If sorting by status, we need to sort in memory
-  if (sortBy === 'status') {
+  if (sortBy === "status") {
     // Status rank mapping for sorting
     const statusRank: Record<string, number> = {
       CREATED: 1,
@@ -273,15 +275,15 @@ export async function getShipments(filters: ShipmentFilters = {}): Promise<Shipm
       DELIVERED: 9,
       COMPLETED: 10,
     };
-    
+
     shipments = shipments.sort((a, b) => {
       const rankA = statusRank[a.status as keyof typeof statusRank] || 0;
       const rankB = statusRank[b.status as keyof typeof statusRank] || 0;
-      
-      return sortOrder === 'asc' ? rankA - rankB : rankB - rankA;
+
+      return sortOrder === "asc" ? rankA - rankB : rankB - rankA;
     });
   }
-  
+
   return {
     shipments,
     totalCount,
@@ -308,7 +310,7 @@ export async function getShipmentById(id: string) {
         documents: true,
         timeline: {
           orderBy: {
-            timestamp: 'desc',
+            timestamp: "desc",
           },
         },
         checkpoints: true,

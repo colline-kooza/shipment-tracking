@@ -1,21 +1,21 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { 
-  Bell, 
-  Search, 
-  Menu, 
-  X, 
-  LogOut, 
-  User, 
-  Settings, 
+import {
+  Bell,
+  Search,
+  Menu,
+  X,
+  LogOut,
+  User,
+  Settings,
   HelpCircle,
   ChevronDown,
   Check,
   CheckCheck,
   FileCheck,
   FileX,
-  Trash2
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -29,7 +29,11 @@ import Logo from "../global/Logo";
 import { NotificationType } from "@prisma/client";
 
 import { formatDistanceToNow } from "date-fns";
-import { getNotifications, markAllNotificationsAsRead, markNotificationAsRead } from "@/actions/notifactions";
+import {
+  getNotifications,
+  markAllNotificationsAsRead,
+  markNotificationAsRead,
+} from "@/actions/notifactions";
 
 export default function Navbar({ session }: { session: Session }) {
   const router = useRouter();
@@ -40,7 +44,7 @@ export default function Navbar({ session }: { session: Session }) {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  
+
   useEffect(() => {
     if (notificationsOpen) {
       fetchNotifications();
@@ -99,11 +103,11 @@ export default function Navbar({ session }: { session: Session }) {
 
   const handleViewAllNotifications = () => {
     setNotificationsOpen(false);
-    router.push('/dashboard/notifications');
+    router.push("/dashboard/notifications");
   };
 
   // Get unread notifications count
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   // Get notification icon based on type
   const getNotificationIcon = (type: NotificationType) => {
@@ -123,7 +127,6 @@ export default function Navbar({ session }: { session: Session }) {
 
   return (
     <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b bg-background/95 px-2 backdrop-blur-sm lg:px-6">
-      
       {/* Center - Search (only on desktop) */}
       <div className="hidden md:block max-w-md w-full mx-4">
         <div className="relative">
@@ -156,16 +159,16 @@ export default function Navbar({ session }: { session: Session }) {
             )}
             <span className="sr-only">Notifications</span>
           </Button>
-          
+
           {notificationsOpen && (
             <div className="absolute right-0 mt-2 w-80 rounded-md bg-background shadow-lg ring-1 ring-black ring-opacity-5 z-50">
               <div className="p-3 border-b flex justify-between items-center">
                 <h3 className="text-sm font-medium">Notifications</h3>
                 {unreadCount > 0 && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="text-xs flex items-center" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs flex items-center"
                     onClick={handleMarkAllAsRead}
                   >
                     <CheckCheck className="h-3 w-3 mr-1" />
@@ -181,11 +184,12 @@ export default function Navbar({ session }: { session: Session }) {
                 ) : notifications.length > 0 ? (
                   <div>
                     {notifications.map((notification) => (
-                      <div 
-                        key={notification.id} 
+                      <div
+                        key={notification.id}
                         className={cn(
                           "p-3 border-b hover:bg-muted/50 transition-colors cursor-pointer flex",
-                          !notification.isRead && "bg-blue-50 dark:bg-blue-900/10"
+                          !notification.isRead &&
+                            "bg-blue-50 dark:bg-blue-900/10"
                         )}
                       >
                         <div className="mr-3 mt-0.5">
@@ -193,36 +197,47 @@ export default function Navbar({ session }: { session: Session }) {
                         </div>
                         <div className="flex-1">
                           <div className="flex justify-between items-start">
-                            <h4 className="text-sm font-medium">{notification.title}</h4>
+                            <h4 className="text-sm font-medium">
+                              {notification.title}
+                            </h4>
                             <div className="flex items-center">
                               {!notification.isRead && (
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
                                   className="h-6 w-6 p-0"
-                                  onClick={() => handleMarkAsRead(notification.id)}
+                                  onClick={() =>
+                                    handleMarkAsRead(notification.id)
+                                  }
                                 >
                                   <Check className="h-3 w-3" />
                                 </Button>
                               )}
                             </div>
                           </div>
-                          <p className="text-xs text-muted-foreground">{notification.message}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {notification.message}
+                          </p>
                           <span className="text-xs text-muted-foreground mt-1 block">
-                            {formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true })}
+                            {formatDistanceToNow(
+                              new Date(notification.timestamp),
+                              { addSuffix: true }
+                            )}
                           </span>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground p-4 text-center">No notifications</p>
+                  <p className="text-sm text-muted-foreground p-4 text-center">
+                    No notifications
+                  </p>
                 )}
               </div>
               <div className="border-t p-2">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+                <Button
+                  variant="ghost"
+                  size="sm"
                   className="w-full text-xs"
                   onClick={handleViewAllNotifications}
                 >
@@ -244,16 +259,16 @@ export default function Navbar({ session }: { session: Session }) {
               {session.user.name?.charAt(0)}
             </div>
             <div className="hidden md:flex flex-col items-start">
-              <span className="text-sm font-medium">
-                {session.user.name}
-              </span>
+              <span className="text-sm font-medium">{session.user.name}</span>
               <span className="text-xs text-muted-foreground capitalize">
                 {role}
               </span>
             </div>
-            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 hidden md:block ${
-              profileOpen ? "transform rotate-180" : ""
-            }`} />
+            <ChevronDown
+              className={`h-4 w-4 text-muted-foreground transition-transform duration-200 hidden md:block ${
+                profileOpen ? "transform rotate-180" : ""
+              }`}
+            />
           </Button>
 
           {/* Profile Dropdown */}
@@ -261,12 +276,14 @@ export default function Navbar({ session }: { session: Session }) {
             <div className="absolute right-0 mt-2 w-56 rounded-md bg-background shadow-lg ring-1 ring-black ring-opacity-5 z-50">
               <div className="px-4 py-3 border-b">
                 <p className="text-sm font-medium">{session.user.name}</p>
-                <p className="text-xs text-muted-foreground">{session.user.email}</p>
+                <p className="text-xs text-muted-foreground">
+                  {session.user.email}
+                </p>
               </div>
               <div className="py-1">
                 <Button
                   variant="ghost"
-                  onClick={() => handleMenuItemClick('/profile')}
+                  onClick={() => handleMenuItemClick("/dashboard/settings")}
                   className="flex w-full items-center px-4 py-2 text-sm text-foreground justify-start font-normal"
                 >
                   <User className="h-4 w-4 mr-3" />
@@ -274,7 +291,7 @@ export default function Navbar({ session }: { session: Session }) {
                 </Button>
                 <Button
                   variant="ghost"
-                  onClick={() => handleMenuItemClick('/settings')}
+                  onClick={() => handleMenuItemClick("/dashboard/settings")}
                   className="flex w-full items-center px-4 py-2 text-sm text-foreground justify-start font-normal"
                 >
                   <Settings className="h-4 w-4 mr-3" />
@@ -282,7 +299,9 @@ export default function Navbar({ session }: { session: Session }) {
                 </Button>
                 <Button
                   variant="ghost"
-                  onClick={() => handleMenuItemClick('/help')}
+                  onClick={() => {
+                    window.open("https://wa.me/1234567890", "_blank");
+                  }}
                   className="flex w-full items-center px-4 py-2 text-sm text-foreground justify-start font-normal"
                 >
                   <HelpCircle className="h-4 w-4 mr-3" />

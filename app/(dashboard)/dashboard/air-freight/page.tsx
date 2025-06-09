@@ -323,7 +323,7 @@ export default function AirFreightPage() {
     return (
       <>
         {shipments.map((shipment: AirFreightShipment) => (
-          <Link href={`/dashboard/shipments/${shipment.id}`} key={shipment.id}>
+          <Link href={`/dashboard/shipments-trakit/${shipment.id}`} key={shipment.id}>
             <Card className="mb-4 p-4 hover:shadow-md transition-shadow border-l-4 border-l-transparent hover:border-l-sky-600">
               <div className="flex flex-col gap-3">
                 {/* Header - Reference and Client */}

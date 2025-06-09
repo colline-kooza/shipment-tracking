@@ -280,7 +280,7 @@ export type Document = {
 
 export type TimelineEvent = {
   id: string;
-  shipmentId: string | null; 
+  shipmentId: string | null;
   status: ShipmentStatus;
   notes?: string | null;
   location?: string | null;
@@ -308,3 +308,86 @@ export type DocumentWithShipment = {
     reference: string;
   };
 };
+
+// types/shipment-export.ts
+export interface ShipmentExportData {
+  // Basic Information
+  reference: string;
+  trackingNumber?: string;
+  client: string;
+  status: string;
+  invoiceStatus: string;
+  type: string;
+
+  // Route Information
+  origin: string;
+  destination: string;
+
+  // Dates
+  createdAt: string;
+  arrivalDate?: string;
+  departureDate?: string;
+
+  // Transport Details
+  container?: string;
+  truck?: string;
+  vessel?: string;
+  flight?: string;
+
+  // Progress Metrics
+  completedDocuments: number;
+  totalDocuments: number;
+  completionPercentage: number;
+  daysToArrival?: number;
+  timelineEvents: number;
+
+  // Documents
+  documents: ExportDocumentData[];
+
+  // Timeline
+  timeline: ExportTimelineEvent[];
+
+  // Checkpoints
+  checkpoints: ExportCheckpoint[];
+
+  // Export Metadata
+  exportedAt: string;
+  exportedBy?: string;
+}
+
+export interface ExportDocumentData {
+  name: string;
+  type: string;
+  status: string;
+  uploadedAt: string;
+  notes?: string;
+  verifiedAt?: string;
+  rejectedAt?: string;
+}
+
+export interface ExportTimelineEvent {
+  id: string;
+  event: string;
+  description?: string;
+  timestamp: string;
+  location?: string;
+  status?: string;
+}
+
+export interface ExportCheckpoint {
+  id: string;
+  location: string;
+  status: string;
+  timestamp: string;
+  description?: string;
+}
+
+export type ExportFormat = "pdf" | "excel" | "csv" | "json";
+
+export interface ExportOptions {
+  format: ExportFormat;
+  includeDocuments?: boolean;
+  includeTimeline?: boolean;
+  includeCheckpoints?: boolean;
+  customFields?: string[];
+}
