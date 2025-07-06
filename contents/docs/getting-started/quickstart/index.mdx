@@ -1,0 +1,151 @@
+---
+title: Quickstart
+description: Get your HubStack project up and running in minutes with this step-by-step guide.
+---
+
+# Quickstart Guide
+
+Follow these steps to set up your HubStack project and start building your application.
+
+## Prerequisites
+
+Before you begin, ensure you have:
+
+- Node.js 18.17 or later
+- PostgreSQL database
+- GitHub account (for authentication)
+- Google Cloud account (for authentication)
+
+## Setup Steps
+
+<Stepper>
+  <StepperItem title="Clone the Repository">
+    Open your terminal and run the following commands:
+    ```plaintext
+    git clone https://github.com/your-username/hubstack.git
+    cd hubstack
+    ```
+  </StepperItem>
+
+<StepperItem title="Install Dependencies">
+  Install all required packages using pnpm:
+
+```plaintext
+pnpm install
+```
+
+</StepperItem>
+
+  <StepperItem title="Configure Environment">
+    Create a `.env` file in the root directory with these variables:
+    ```plaintext
+    # Database
+    DATABASE_URL="postgresql://neondb_owner:npg_rb9JB0lKuMCO@ep-cold-voice-a58rzvsm-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require"
+
+    # Auth
+    NEXTAUTH_SECRET="3cc9d3166430d0605de2ede088934d4e72085ed6"
+    NEXTAUTH_URL="http://localhost:3000"
+    NEXT_PUBLIC_BASE_URL="http://localhost:3000"
+
+    # GitHub Auth
+    GITHUB_CLIENT_ID="your-github-client-id"
+    GITHUB_SECRET="your-github-secret"
+
+    # Google Auth
+    GOOGLE_CLIENT_ID="your-google-client-id"
+    GOOGLE_CLIENT_SECRET="your-google-client-secret"
+
+    # Email
+    RESEND_API_KEY="your-resend-api-key"
+
+    # Upload Thing
+    UPLOADTHING_TOKEN='your-uploadthing-token'
+    ```
+
+  </StepperItem>
+
+  <StepperItem title="Set Up Database">
+    Initialize your database with these commands:
+    ```plaintext
+    # Generate Prisma Client
+    pnpm prisma generate
+
+    # Run migrations
+    pnpm prisma migrate dev
+
+    # Seed the database (optional)
+    pnpm prisma db seed
+    ```
+
+  </StepperItem>
+
+  <StepperItem title="Configure Authentication">
+    ### GitHub Setup
+    1. Go to GitHub Developer Settings
+    2. Create a new OAuth App
+    3. Set homepage URL to `http://localhost:3000`
+    4. Set callback URL to `http://localhost:3000/api/auth/callback/github`
+    5. Copy Client ID and Secret to your `.env` file
+
+    ### Google Setup
+    1. Visit Google Cloud Console
+    2. Create a new project
+    3. Enable OAuth 2.0
+    4. Configure consent screen
+    5. Add redirect URI: `http://localhost:3000/api/auth/callback/google`
+    6. Copy credentials to your `.env` file
+
+  </StepperItem>
+
+  <StepperItem title="Start Development Server">
+    Launch your development server:
+    ```plaintext
+    pnpm dev
+    ```
+    Visit `http://localhost:3000` to see your application running.
+  </StepperItem>
+</Stepper>
+
+<Note type="warning" title="Secure your Credentials">
+  Make sure to add your `.env` file to `.gitignore` to keep your credentials
+  secure.
+</Note>
+
+## Verify Installation
+
+After completing the setup:
+
+1. Visit `http://localhost:3000`
+2. Test authentication with GitHub or Google
+3. Access the dashboard
+4. Try uploading files
+5. Test form components
+
+<Note type="success" title="Join Group">
+  If you encounter any issues, check our troubleshooting guide or join our
+  Whatsap community for support.
+</Note>
+
+## Next Steps
+
+Now that your project is running, you can:
+
+<Tabs defaultValue="customize">
+  <TabsList>
+    <TabsTrigger value="customize">Customize</TabsTrigger>
+    <TabsTrigger value="develop">Develop</TabsTrigger>
+    <TabsTrigger value="deploy">Deploy</TabsTrigger>
+  </TabsList>
+  <TabsContent value="customize">
+    - Modify authentication providers - Update database schema - Customize UI
+    components - Configure email templates
+  </TabsContent>
+  <TabsContent value="develop">
+    - Add new features - Create custom components - Implement business logic -
+    Set up API routes
+  </TabsContent>
+  <TabsContent value="deploy">
+    - Configure production database - Set up environment variables - Deploy to
+    Vercel - Monitor performance
+  </TabsContent>
+</Tabs>

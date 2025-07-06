@@ -1,0 +1,322 @@
+````import React, { useState } from 'react';
+
+/**
+ * Demonstration of the WesendallLogo component with various configurations
+ */
+const WesendallLogoDemo = () => {
+  const [darkMode, setDarkMode] = useState(false);
+
+  // Size mapping for different logo sizes
+  const sizes = {
+    xs: {
+      container: 'h-6',
+      logo: 'text-lg',
+      tagline: 'text-xs',
+      iconHeight: 16,
+      iconOffsetY: -1,
+    },
+    sm: {
+      container: 'h-8',
+      logo: 'text-xl',
+      tagline: 'text-xs',
+      iconHeight: 18,
+      iconOffsetY: -1,
+    },
+    md: {
+      container: 'h-10',
+      logo: 'text-2xl',
+      tagline: 'text-sm',
+      iconHeight: 22,
+      iconOffsetY: -1,
+    },
+    lg: {
+      container: 'h-12',
+      logo: 'text-3xl',
+      tagline: 'text-sm',
+      iconHeight: 26,
+      iconOffsetY: -1,
+    },
+    xl: {
+      container: 'h-16',
+      logo: 'text-4xl',
+      tagline: 'text-base',
+      iconHeight: 34,
+      iconOffsetY: -2,
+    },
+  };
+
+  // Color definitions for light and dark mode
+  const colors = {
+    light: {
+      text: "text-slate-800",
+      textHighlight: "text-blue-600",
+      textHighlight2: "text-teal-500",
+      iconPrimary: "#2563eb", // blue-600
+      iconSecondary: "#14b8a6", // teal-500
+      iconFill: "#3b82f6", // blue-500
+      tagline: "text-slate-600",
+    },
+    dark: {
+      text: "text-white",
+      textHighlight: "text-blue-400",
+      textHighlight2: "text-teal-400",
+      iconPrimary: "#60a5fa", // blue-400
+      iconSecondary: "#2dd4bf", // teal-400
+      iconFill: "#93c5fd", // blue-300
+      tagline: "text-slate-300",
+    }
+  };
+
+  // Paper airplane icon (style 2)
+  const PaperAirplaneIcon = ({ size, darkMode }) => {
+    const currentColors = darkMode ? colors.dark : colors.light;
+    const currentSize = sizes[size];
+
+    return (
+      <span
+        className="inline-flex items-center relative"
+        style={{
+          height: currentSize.iconHeight,
+          width: currentSize.iconHeight * 1.2,
+          top: currentSize.iconOffsetY,
+          margin: '0 -1px'
+        }}
+      >
+        <svg
+          width={currentSize.iconHeight * 1.2}
+          height={currentSize.iconHeight}
+          viewBox="0 0 24 20"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          className="absolute"
+        >
+          <path
+            d="M2.5 9.5L21.5 2.5L14.5 18.5L10.5 12.5L2.5 9.5Z"
+            fill={currentColors.iconFill}
+            fillOpacity="0.3"
+            stroke={currentColors.iconPrimary}
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M21.5 2.5L10.5 12.5"
+            stroke={currentColors.iconPrimary}
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </span>
+    );
+  };
+
+  // Logo with text
+  const WesendallLogo = ({ size, darkMode, tagline = 'Send SMS & Email with ease', iconOnly = false }) => {
+    const currentColors = darkMode ? colors.dark : colors.light;
+    const currentSize = sizes[size];
+
+    if (iconOnly) {
+      return (
+        <div className="flex flex-col items-center">
+          <div className={`relative ${currentSize.container} aspect-square rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center`}>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-3/4 w-3/4"
+            >
+              <path
+                d="M2.5 9.5L21.5 2.5L14.5 18.5L10.5 12.5L2.5 9.5Z"
+                fill={currentColors.iconFill}
+                fillOpacity="0.3"
+                stroke={currentColors.iconPrimary}
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M21.5 2.5L10.5 12.5"
+                stroke={currentColors.iconPrimary}
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex flex-col">
+        <div className={`font-bold tracking-tight ${currentSize.logo} hover:opacity-80 transition-opacity cursor-pointer`}>
+          <span className={currentColors.textHighlight}>W</span>
+          <span className={currentColors.text}>es</span>
+          <PaperAirplaneIcon size={size} darkMode={darkMode} />
+          <span className={currentColors.text}>ndA</span>
+          <span className={currentColors.textHighlight2}>ll</span>
+        </div>
+
+        {tagline && (
+          <div className={`${currentColors.tagline} ${currentSize.tagline} mt-1`}>
+            {tagline}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Demo mockups
+  return (
+    <div className={`transition-colors duration-300 ${darkMode ? 'bg-slate-900 text-white' : 'bg-white text-slate-800'} p-8`}>
+      <div className="max-w-4xl mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-2xl font-bold">Wesendall Logo Component</h1>
+          <button
+            onClick={() => setDarkMode(!darkMode)}
+            className={`px-4 py-2 rounded-md ${darkMode ? 'bg-slate-700 text-white' : 'bg-slate-200 text-slate-800'}`}
+          >
+            Toggle {darkMode ? 'Light' : 'Dark'} Mode
+          </button>
+        </div>
+
+        {/* Primary Logo */}
+        <div className={`p-10 mb-8 rounded-xl ${darkMode ? 'bg-slate-800' : 'bg-slate-50'} border ${darkMode ? 'border-slate-700' : 'border-slate-200'} shadow-lg`}>
+          <WesendallLogo size="xl" darkMode={darkMode} />
+        </div>
+
+        {/* Header Example */}
+        <div className="mb-12">
+          <h2 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+            Header Example
+          </h2>
+          <div className={`rounded-lg overflow-hidden border ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
+            <div className={`${darkMode ? 'bg-slate-800' : 'bg-white'} p-4 flex items-center justify-between border-b ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
+              <WesendallLogo size="md" darkMode={darkMode} tagline="" />
+              <div className="flex space-x-6">
+                <div className={`h-2 w-12 rounded ${darkMode ? 'bg-slate-700' : 'bg-slate-200'}`}></div>
+                <div className={`h-2 w-12 rounded ${darkMode ? 'bg-slate-700' : 'bg-slate-200'}`}></div>
+                <div className={`h-2 w-12 rounded ${darkMode ? 'bg-slate-700' : 'bg-slate-200'}`}></div>
+              </div>
+              <div className={`h-8 w-8 rounded-full ${darkMode ? 'bg-slate-700' : 'bg-slate-200'}`}></div>
+            </div>
+            <div className={`${darkMode ? 'bg-slate-900' : 'bg-slate-50'} p-8 min-h-40`}>
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <div className={`text-xl font-bold mb-2 ${darkMode ? 'text-white' : 'text-slate-800'}`}>Dashboard Content</div>
+                  <div className={`${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Your content would appear here</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Size Variations */}
+        <div className={`p-8 mb-8 rounded-xl ${darkMode ? 'bg-slate-800' : 'bg-slate-50'} border ${darkMode ? 'border-slate-700' : 'border-slate-200'} shadow-lg`}>
+          <h2 className={`text-lg font-semibold mb-6 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+            Size Variations
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+            <div className={`p-6 rounded-lg ${darkMode ? 'bg-slate-900' : 'bg-white'} border ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
+              <h3 className={`text-sm font-medium mb-4 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Extra Large (xl)</h3>
+              <WesendallLogo size="xl" darkMode={darkMode} />
+            </div>
+
+            <div className={`p-6 rounded-lg ${darkMode ? 'bg-slate-900' : 'bg-white'} border ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
+              <h3 className={`text-sm font-medium mb-4 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Large (lg)</h3>
+              <WesendallLogo size="lg" darkMode={darkMode} />
+            </div>
+
+            <div className={`p-6 rounded-lg ${darkMode ? 'bg-slate-900' : 'bg-white'} border ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
+              <h3 className={`text-sm font-medium mb-4 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Medium (md)</h3>
+              <WesendallLogo size="md" darkMode={darkMode} />
+            </div>
+
+            <div className={`p-6 rounded-lg ${darkMode ? 'bg-slate-900' : 'bg-white'} border ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
+              <h3 className={`text-sm font-medium mb-4 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Small (sm)</h3>
+              <WesendallLogo size="sm" darkMode={darkMode} />
+            </div>
+
+            <div className={`p-6 rounded-lg ${darkMode ? 'bg-slate-900' : 'bg-white'} border ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
+              <h3 className={`text-sm font-medium mb-4 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Extra Small (xs)</h3>
+              <WesendallLogo size="xs" darkMode={darkMode} />
+            </div>
+
+            <div className={`p-6 rounded-lg ${darkMode ? 'bg-slate-900' : 'bg-white'} border ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
+              <h3 className={`text-sm font-medium mb-4 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Icon Only</h3>
+              <div className="flex justify-center">
+                <WesendallLogo size="md" darkMode={darkMode} iconOnly={true} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tagline Variations */}
+        <div className={`p-8 mb-8 rounded-xl ${darkMode ? 'bg-slate-800' : 'bg-slate-50'} border ${darkMode ? 'border-slate-700' : 'border-slate-200'} shadow-lg`}>
+          <h2 className={`text-lg font-semibold mb-6 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+            Tagline Variations
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className={`p-6 rounded-lg ${darkMode ? 'bg-slate-900' : 'bg-white'} border ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
+              <h3 className={`text-sm font-medium mb-4 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Default Tagline</h3>
+              <WesendallLogo size="lg" darkMode={darkMode} />
+            </div>
+
+            <div className={`p-6 rounded-lg ${darkMode ? 'bg-slate-900' : 'bg-white'} border ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
+              <h3 className={`text-sm font-medium mb-4 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Alternative Tagline</h3>
+              <WesendallLogo size="lg" darkMode={darkMode} tagline="Messaging solutions for everyone" />
+            </div>
+
+            <div className={`p-6 rounded-lg ${darkMode ? 'bg-slate-900' : 'bg-white'} border ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
+              <h3 className={`text-sm font-medium mb-4 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Technical Tagline</h3>
+              <WesendallLogo size="lg" darkMode={darkMode} tagline="Powerful API for SMS & Email" />
+            </div>
+
+            <div className={`p-6 rounded-lg ${darkMode ? 'bg-slate-900' : 'bg-white'} border ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
+              <h3 className={`text-sm font-medium mb-4 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>No Tagline</h3>
+              <WesendallLogo size="lg" darkMode={darkMode} tagline="" />
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile View */}
+        <div className={`p-8 rounded-xl ${darkMode ? 'bg-slate-800' : 'bg-slate-50'} border ${darkMode ? 'border-slate-700' : 'border-slate-200'} shadow-lg`}>
+          <h2 className={`text-lg font-semibold mb-6 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+            Mobile View Example
+          </h2>
+
+          <div className="flex justify-center">
+            <div className={`w-64 h-[420px] rounded-xl overflow-hidden border-4 ${darkMode ? 'border-slate-700' : 'border-slate-300'}`}>
+              <div className={`${darkMode ? 'bg-slate-900' : 'bg-white'} h-full`}>
+                <div className={`p-3 flex items-center border-b ${darkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+                  <WesendallLogo size="xs" darkMode={darkMode} tagline="" />
+                  <div className="ml-auto flex space-x-1">
+                    <div className={`h-4 w-4 rounded-full ${darkMode ? 'bg-slate-800' : 'bg-slate-200'}`}></div>
+                    <div className={`h-4 w-4 rounded-full ${darkMode ? 'bg-slate-800' : 'bg-slate-200'}`}></div>
+                  </div>
+                </div>
+                <div className="p-4">
+                  <div className={`h-3 w-2/3 rounded ${darkMode ? 'bg-slate-800' : 'bg-slate-200'} mb-2`}></div>
+                  <div className={`h-3 w-full rounded ${darkMode ? 'bg-slate-800' : 'bg-slate-200'} mb-2`}></div>
+                  <div className={`h-3 w-3/4 rounded ${darkMode ? 'bg-slate-800' : 'bg-slate-200'} mb-8`}></div>
+
+                  <div className={`h-20 rounded-lg ${darkMode ? 'bg-slate-800' : 'bg-slate-200'} mb-3`}></div>
+                  <div className={`h-20 rounded-lg ${darkMode ? 'bg-slate-800' : 'bg-slate-200'} mb-3`}></div>
+                  <div className={`h-20 rounded-lg ${darkMode ? 'bg-slate-800' : 'bg-slate-200'}`}></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default WesendallLogoDemo;```
+````
+
+https://tailwind-generator.com/og-image-generator/generator
