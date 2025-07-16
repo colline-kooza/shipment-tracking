@@ -1,15 +1,31 @@
-"use client";
-import React, { useState, useEffect } from 'react';
-import { Package, MapPin, Truck, Calendar, FileText, User, Clock, ArrowLeft, Download, Edit, Upload, Loader2, Trash2, AlertTriangle } from 'lucide-react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import StatusBadge from '@/components/status-badge';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { formatDate } from '@/utils/dateUtils';
-import ShipmentTimeline from '@/components/Shipments/ShipmentTimeline';
-import DocumentCard from '@/components/Documents/DocumentCard';
-import { useCreateDocument, useUpdateDocumentStatus } from '@/hooks/useDocuments';
+"use client"
+import type React from "react"
+import { useState, useEffect } from "react"
+import {
+  Package,
+  MapPin,
+  Truck,
+  Calendar,
+  FileText,
+  User,
+  Clock,
+  ArrowLeft,
+  Download,
+  Edit,
+  Upload,
+  Loader2,
+  Trash2,
+  AlertTriangle,
+} from "lucide-react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import StatusBadge from "@/components/status-badge"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { formatDate } from "@/utils/dateUtils"
+import ShipmentTimeline from "@/components/Shipments/ShipmentTimeline"
+import DocumentCard from "@/components/Documents/DocumentCard"
+import { useCreateDocument, useUpdateDocumentStatus } from "@/hooks/useDocuments"
 import {
   Dialog,
   DialogContent,
@@ -17,153 +33,193 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-  DialogClose
-} from '@/components/ui/dialog';
-import { ShipmentStatus, DocumentType, DocumentStatus } from '@prisma/client';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
-import ShipmentProgress from '@/components/trakit-dashboard/ShipmentProgress';
-import { toast } from 'sonner';
-import { useShipmentById, useUpdateShipmentStatus, useDeleteShipment } from '@/hooks/useShipmentQueries2';
-import { DocumentUploadForm } from './DocumentUploadForm';
-import ExportDialog from '../dashboard/export-dialog';
+  DialogClose,
+} from "@/components/ui/dialog"
+import { ShipmentStatus, DocumentType, DocumentStatus } from "@prisma/client"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Skeleton } from "@/components/ui/skeleton"
+import ShipmentProgress from "@/components/trakit-dashboard/ShipmentProgress"
+import { toast } from "sonner"
+import { useShipmentById, useUpdateShipmentStatus, useDeleteShipment } from "@/hooks/useShipmentQueries2"
+import { DocumentUploadForm } from "./DocumentUploadForm"
+import ExportDialog from "../dashboard/export-dialog"
+import FileUploader from "../docs/FileUploader"
+import { DatePicker } from "../ui/date-picker"
 
 interface ShipmentDetailProps {
-  id: string;
+  id: string
 }
 
 interface DocumentUpload {
-  type: DocumentType;
+  type: DocumentType
   file: {
-    url: string;
-    name: string;
-  };
+    url: string
+    name: string
+  }
+}
+
+// Define props for FileUploader for clarity
+interface FileUploaderProps {
+  endpoint: string
+  value: string // The URL of the uploaded file
+  onChange: (url: string, name: string) => void // Callback with URL and name
+  isUploaded: boolean
+  label: string
+  description: string
 }
 
 export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
-  const router = useRouter();
-  
+  const router = useRouter()
   // State variables
-  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'timeline'>('overview');
-  const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
-  const [isViewDocumentDialogOpen, setIsViewDocumentDialogOpen] = useState(false);
-  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedDocument, setSelectedDocument] = useState<any>(null);
-  const [selectedStatus, setSelectedStatus] = useState<string>('');
-  const [statusNotes, setStatusNotes] = useState('');
-  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"overview" | "documents" | "timeline">("overview")
+  const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false)
+  const [isViewDocumentDialogOpen, setIsViewDocumentDialogOpen] = useState(false)
+  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [selectedDocument, setSelectedDocument] = useState<any>(null)
+  const [selectedStatus, setSelectedStatus] = useState<ShipmentStatus>(ShipmentStatus.CREATED) // Initialize with a default enum value
+  const [statusNotes, setStatusNotes] = useState("")
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false)
 
-  // Upload state
+  // New state for status update dialog
+  const [statusUpdateDate, setStatusUpdateDate] = useState<Date | undefined>(undefined)
+  // Change type to match FileUploader's output
+  const [statusUpdateFile, setStatusUpdateFile] = useState<{ url: string; name: string } | null>(null)
+  const [statusUpdateFileType, setStatusUpdateFileType] = useState<DocumentType | "">("")
+  const [fileUploaded, setFileUploaded] = useState(false) // State to indicate if file is uploaded
+
+  // Upload state (for the main document upload dialog)
   const [uploadData, setUploadData] = useState<DocumentUpload>({
     type: DocumentType.COMMERCIAL_INVOICE,
     file: {
-      url: '',
-      name: ''
-    }
-  });
+      url: "",
+      name: "",
+    },
+  })
 
   // Fetch shipment data using React Query
-  const { data: shipmentResponse, isLoading, error } = useShipmentById(id);
-  const updateStatusMutation = useUpdateShipmentStatus();
-  const createDocumentMutation = useCreateDocument();
-  const updateDocumentStatusMutation = useUpdateDocumentStatus();
-  const deleteShipmentMutation = useDeleteShipment();
+  const { data: shipmentResponse, isLoading, error } = useShipmentById(id)
+  const updateStatusMutation = useUpdateShipmentStatus()
+  const createDocumentMutation = useCreateDocument()
+  const updateDocumentStatusMutation = useUpdateDocumentStatus()
+  const deleteShipmentMutation = useDeleteShipment()
 
   // Extract shipment from response
-  const shipment = shipmentResponse?.success ? shipmentResponse.data : null;
+  const shipment = shipmentResponse?.success ? shipmentResponse.data : null
 
   // Set initial status when shipment data loads
   useEffect(() => {
     if (shipment?.status) {
-      setSelectedStatus(shipment.status);
+      setSelectedStatus(shipment.status)
     }
-  }, [shipment]);
+  }, [shipment])
 
   // Handle status update
   const handleStatusUpdate = async () => {
-    if (!selectedStatus) return;
-    
-    updateStatusMutation.mutate({
-      id,
-      status: selectedStatus,
-      notes: statusNotes
-    }, {
-      onSuccess: () => {
-        setIsStatusDialogOpen(false);
-        setStatusNotes('');
-        toast.success("Shipment status updated successfully");
+    if (!selectedStatus) return
+    try {
+      let documentFileDetails: { url: string; name: string; type: DocumentType } | undefined = undefined
+      if (
+        statusUpdateFile &&
+        statusUpdateFile.url && // Ensure URL exists
+        statusUpdateFile.name && // Ensure name exists
+        statusUpdateFileType &&
+        Object.values(DocumentType).includes(statusUpdateFileType as DocumentType)
+      ) {
+        // Directly use the URL and name from statusUpdateFile
+        documentFileDetails = {
+          url: statusUpdateFile.url,
+          name: statusUpdateFile.name,
+          type: statusUpdateFileType as DocumentType,
+        }
       }
-    });
-  };
+
+      await updateStatusMutation.mutateAsync({
+        id,
+        status: selectedStatus,
+        notes: statusNotes,
+        statusDate: statusUpdateDate?.toISOString(),
+        documentFile: documentFileDetails,
+      })
+      toast.success("Shipment status updated successfully")
+      setIsStatusDialogOpen(false)
+      setStatusNotes("")
+      setSelectedStatus(shipment?.status || ShipmentStatus.CREATED)
+      setStatusUpdateDate(undefined)
+      setStatusUpdateFile(null) // Reset file state
+      setStatusUpdateFileType("")
+      setFileUploaded(false)
+    } catch (error: any) {
+      toast.error("Failed to update shipment status", {
+        description: error.message || "Unknown error occurred",
+      })
+    }
+  }
 
   // Handle edit shipment
   const handleEditShipment = () => {
-    router.push(`/dashboard/shipments-trakit/edit/${id}`);
-  };
+    router.push(`/dashboard/shipments-trakit/edit/${id}`)
+  }
 
   // Handle delete shipment
   const handleDeleteShipment = async () => {
     deleteShipmentMutation.mutate(id, {
       onSuccess: () => {
-        setIsDeleteDialogOpen(false);
-        toast.success("Shipment deleted successfully");
-        router.push('/dashboard/shipments-trakit');
+        setIsDeleteDialogOpen(false)
+        toast.success("Shipment deleted successfully")
+        router.push("/dashboard/shipments-trakit")
       },
       onError: (error) => {
         toast.error("Failed to delete shipment", {
-          description: error.message || "Unknown error occurred"
-        });
-      }
-    });
-  };
+          description: error.message || "Unknown error occurred",
+        })
+      },
+    })
+  }
 
   // Handle view document
   const handleViewDocument = (document: any) => {
-    setSelectedDocument(document);
-    setIsViewDocumentDialogOpen(true);
-  };
+    setSelectedDocument(document)
+    setIsViewDocumentDialogOpen(true)
+  }
 
   // Handle document verification
   const handleVerifyDocument = async (documentId: string) => {
     updateDocumentStatusMutation.mutate({
       id: documentId,
       status: DocumentStatus.VERIFIED,
-    });
-  };
+    })
+  }
 
   // Handle document rejection
   const handleRejectDocument = async (documentId: string) => {
     updateDocumentStatusMutation.mutate({
       id: documentId,
       status: DocumentStatus.REJECTED,
-    });
-  };
+    })
+  }
 
-  // Handle upload document
+  // Handle upload document (for the main document upload dialog)
   const handleUploadDocument = async () => {
-    createDocumentMutation.mutate({
-      shipmentId: id,
-      type: uploadData.type,
-      file: uploadData.file,
-      referenceNumber: null
-    }, {
-      onSuccess: () => {
-        setIsUploadDialogOpen(false);
-        setUploadData({
-          type: DocumentType.COMMERCIAL_INVOICE,
-          file: { url: '', name: '' }
-        });
-      }
-    });
-  };
+    createDocumentMutation.mutate(
+      {
+        shipmentId: id,
+        type: uploadData.type,
+        file: uploadData.file,
+        referenceNumber: null,
+      },
+      {
+        onSuccess: () => {
+          setIsUploadDialogOpen(false)
+          setUploadData({
+            type: DocumentType.COMMERCIAL_INVOICE,
+            file: { url: "", name: "" },
+          })
+        },
+      },
+    )
+  }
 
   // If loading, show skeleton
   if (isLoading) {
@@ -188,7 +244,7 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
           </div>
         </div>
       </div>
-    );
+    )
   }
 
   // If error, show error message
@@ -203,42 +259,47 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
               </div>
               <h2 className="text-2xl font-semibold text-gray-900 mb-3">Shipment Not Found</h2>
               <p className="text-gray-600 mb-6 max-w-md">
-                {error ? 'An error occurred loading this shipment.' : 'The shipment you\'re looking for doesn\'t exist or has been removed from the system.'}
+                {error
+                  ? "An error occurred loading this shipment."
+                  : "The shipment you're looking for doesn't exist or has been removed from the system."}
               </p>
-              <Link 
+              <Link
                 href="/dashboard/shipments-trakit"
                 className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Shipments
+                <span className="text-sm font-medium">Back to Shipments</span>
               </Link>
             </div>
           </div>
         </div>
       </div>
-    );
+    )
   }
-  
+
   // Extract timeline events
-  const timelineEvents = shipment.timeline || [];
-  
+  const timelineEvents = shipment.timeline || []
   // Extract checkpoints
-  const checkpoints = shipment.checkpoints || [];
+  const checkpoints = shipment.checkpoints || []
 
   // Document completion stats
   const requiredDocTypes = [
     DocumentType.COMMERCIAL_INVOICE,
     DocumentType.PACKING_LIST,
-    shipment.type === 'SEA' ? DocumentType.BILL_OF_LADING : DocumentType.AIRWAY_BILL,
+    shipment.type === "SEA" ? DocumentType.BILL_OF_LADING : DocumentType.AIRWAY_BILL,
     DocumentType.IMPORT_LICENCE,
     DocumentType.CERTIFICATE_OF_CONFORMITY,
     DocumentType.TAX_EXEMPTION,
-    DocumentType.CERTIFICATE_OF_ORIGIN
-  ];
-  
-  const totalRequiredDocs = requiredDocTypes.length;
-  const completedDocs = shipment.documents.filter(doc => doc.status === DocumentStatus.VERIFIED).length;
-  const completionPercentage = Math.round((completedDocs / totalRequiredDocs) * 100);
+    DocumentType.CERTIFICATE_OF_ORIGIN,
+  ]
+  const totalRequiredDocs = requiredDocTypes.length
+  const completedDocs = shipment.documents.filter((doc) => doc.status === DocumentStatus.VERIFIED).length
+  const completionPercentage = Math.round((completedDocs / totalRequiredDocs) * 100)
+
+  // Find the latest status update event with a date or attached file
+  const latestStatusUpdateEvent = shipment.timeline
+    .filter((event) => event.timestamp || event.fileUrl)
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0]
 
   return (
     <div className="min-h-screen">
@@ -246,7 +307,7 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
         {/* Header Section */}
         <div className="mb-8">
           <div className="flex items-center mb-4">
-            <Link 
+            <Link
               href="/dashboard/shipments-trakit"
               className="inline-flex items-center text-blue-600 hover:text-blue-800 transition-colors"
             >
@@ -254,7 +315,6 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
               <span className="text-sm font-medium">Back to Shipments</span>
             </Link>
           </div>
-          
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-900 mb-2">
@@ -264,24 +324,19 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
               </h1>
               <div className="flex items-center gap-3 flex-wrap">
                 <StatusBadge status={shipment.status} />
-                <span className="text-sm text-gray-500">
-                  Created {formatDate(new Date(shipment.createdAt))}
-                </span>
+                <span className="text-sm text-gray-500">Created {formatDate(new Date(shipment.createdAt))}</span>
                 {shipment.consignee && (
                   <div className="flex items-center gap-1 bg-blue-50 px-2 py-1 rounded-md">
                     <User className="w-3 h-3 text-blue-600" />
-                    <span className="text-xs font-medium text-blue-700">
-                      Consignee: {shipment.consignee}
-                    </span>
+                    <span className="text-xs font-medium text-blue-700">Consignee: {shipment.consignee}</span>
                   </div>
                 )}
               </div>
             </div>
-            
             <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                className="flex items-center gap-2 text-xs"
+              <Button
+                variant="outline"
+                className="flex items-center gap-2 text-xs bg-transparent"
                 onClick={() => setIsExportDialogOpen(true)}
               >
                 <Download className="w-4 h-4" />
@@ -289,7 +344,7 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
               </Button>
               <Button
                 variant="outline"
-                className="flex items-center gap-2 text-xs"
+                className="flex items-center gap-2 text-xs bg-transparent"
                 onClick={handleEditShipment}
               >
                 <Edit className="w-4 h-4" />
@@ -297,7 +352,7 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
               </Button>
               <Button
                 variant="outline"
-                className="flex items-center gap-2 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                className="flex items-center gap-2 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 bg-transparent"
                 onClick={() => setIsDeleteDialogOpen(true)}
               >
                 <Trash2 className="w-4 h-4" />
@@ -313,7 +368,6 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
             </div>
           </div>
         </div>
-        
         {/* Progress Card */}
         <Card className="mb-5 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
           <div className="p-4">
@@ -330,39 +384,37 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
               </div>
               <div className="text-center p-3 bg-white rounded-lg shadow-sm">
                 <div className="text-xl font-bold text-purple-600">
-                  {shipment.arrivalDate ?
-                    Math.ceil((new Date(shipment.arrivalDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
-                    : 'TBD'
-                  }
+                  {shipment.arrivalDate
+                    ? Math.ceil(
+                        (new Date(shipment.arrivalDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24),
+                      )
+                    : "TBD"}
                 </div>
                 <div className="text-xs text-gray-600">Days to Arrival</div>
               </div>
               <div className="text-center p-3 bg-white rounded-lg shadow-sm">
-                <div className="text-2xl font-bold text-orange-600">
-                  {timelineEvents.length}
-                </div>
+                <div className="text-2xl font-bold text-orange-600">{timelineEvents.length}</div>
                 <div className="text-sm text-gray-600">Timeline Events</div>
               </div>
             </div>
           </div>
         </Card>
-        
         {/* Tab Navigation */}
         <div className="mb-8">
           <div className="border-b border-gray-200 bg-white rounded-t-lg">
             <nav className="flex p-1">
               {[
-                { key: 'overview', label: 'Overview', icon: Package },
-                { key: 'documents', label: `Documents (${shipment.documents.length})`, icon: FileText },
-                { key: 'timeline', label: 'Timeline', icon: Clock }
+                { key: "overview", label: "Overview", icon: Package },
+                { key: "documents", label: `Documents (${shipment.documents.length})`, icon: FileText },
+                { key: "timeline", label: "Timeline", icon: Clock },
               ].map(({ key, label, icon: Icon }) => (
                 <button
                   key={key}
                   onClick={() => setActiveTab(key as any)}
                   className={`flex items-center gap-2 px-6 py-3 text-xs font-medium rounded-lg transition-all ${
                     activeTab === key
-                      ? 'border-b-[2px] border-blue-600 text-black shadow-sm'
-                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                      ? "border-b-[2px] border-blue-600 text-black shadow-sm"
+                      : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
                   }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -372,9 +424,8 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
             </nav>
           </div>
         </div>
-        
         {/* Tab Content */}
-        {activeTab === 'overview' && (
+        {activeTab === "overview" && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Main Details */}
             <div className="lg:col-span-2 space-y-6">
@@ -385,10 +436,11 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-4">
                       <div className="bg-gray-50 p-4 rounded-lg">
-                        <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Reference Number</h4>
+                        <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+                          Reference Number
+                        </h4>
                         <p className="text-sm font-semibold text-gray-900">{shipment.reference}</p>
                       </div>
-                      
                       <div className="bg-gray-50 p-4 rounded-lg">
                         <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Client</h4>
                         <div className="flex items-center">
@@ -396,7 +448,6 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
                           <span className="text-sm font-medium text-gray-900">{shipment.client}</span>
                         </div>
                       </div>
-
                       {shipment.consignee && (
                         <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                           <h4 className="text-xs font-medium text-blue-700 uppercase tracking-wide mb-2">Consignee</h4>
@@ -406,7 +457,17 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
                           </div>
                         </div>
                       )}
-                      
+                      {shipment.airwayBillNumber && (
+                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                          <h4 className="text-xs font-medium text-blue-700 uppercase tracking-wide mb-2">
+                            Air Way Bill
+                          </h4>
+                          <div className="flex items-center">
+                            <User className="w-5 h-5 text-blue-600 mr-2" />
+                            <span className="text-sm font-semibold text-blue-900">{shipment.airwayBillNumber}</span>
+                          </div>
+                        </div>
+                      )}
                       <div className="bg-gray-50 p-4 rounded-lg">
                         <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Route</h4>
                         <div className="flex items-center">
@@ -417,7 +478,6 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
                         </div>
                       </div>
                     </div>
-                    
                     <div className="space-y-4">
                       <div className="bg-gray-50 p-4 rounded-lg">
                         <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Created Date</h4>
@@ -428,10 +488,11 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
                           </span>
                         </div>
                       </div>
-                      
                       {shipment.arrivalDate && (
                         <div className="bg-gray-50 p-4 rounded-lg">
-                          <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Expected Arrival</h4>
+                          <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+                            Expected Arrival
+                          </h4>
                           <div className="flex items-center">
                             <Clock className="w-5 h-5 text-gray-400 mr-2" />
                             <span className="text-sm font-medium text-gray-900">
@@ -440,15 +501,20 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
                           </div>
                         </div>
                       )}
-                      
                       <div className="bg-gray-50 p-4 rounded-lg">
-                        <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Invoice Status</h4>
+                        <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+                          Invoice Status
+                        </h4>
                         <div className="flex items-center">
-                          <span className={`inline-flex h-3 w-3 rounded-full mr-2 ${
-                            shipment.invoiceStatus === 'PENDING' ? 'bg-yellow-400' :
-                            shipment.invoiceStatus === 'PAID' ? 'bg-green-400' :
-                            'bg-red-400'
-                          }`} />
+                          <span
+                            className={`inline-flex h-3 w-3 rounded-full mr-2 ${
+                              shipment.invoiceStatus === "PENDING"
+                                ? "bg-yellow-400"
+                                : shipment.invoiceStatus === "PAID"
+                                  ? "bg-green-400"
+                                  : "bg-red-400"
+                            }`}
+                          />
                           <span className="text-sm font-medium text-gray-900 capitalize">
                             {shipment.invoiceStatus.toLowerCase()}
                           </span>
@@ -456,23 +522,25 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
                       </div>
                     </div>
                   </div>
-                  
                   {(shipment.container || shipment.truck) && (
                     <div className="mt-6 pt-6 border-t border-gray-200">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {shipment.container && (
                           <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg">
-                            <h4 className="text-xs font-medium text-blue-700 uppercase tracking-wide mb-2">Container</h4>
+                            <h4 className="text-xs font-medium text-blue-700 uppercase tracking-wide mb-2">
+                              Container
+                            </h4>
                             <div className="flex items-center">
                               <Package className="w-5 h-5 text-blue-600 mr-2" />
                               <span className="text-sm font-semibold text-blue-900">{shipment.container}</span>
                             </div>
                           </div>
                         )}
-                        
                         {shipment.truck && (
                           <div className="bg-gradient-to-r from-green-50 to-green-100 p-4 rounded-lg">
-                            <h4 className="text-xs font-medium text-green-700 uppercase tracking-wide mb-2">Assigned Truck</h4>
+                            <h4 className="text-xs font-medium text-green-700 uppercase tracking-wide mb-2">
+                              Assigned Truck
+                            </h4>
                             <div className="flex items-center">
                               <Truck className="w-5 h-5 text-green-600 mr-2" />
                               <span className="text-sm font-semibold text-green-900">{shipment.truck}</span>
@@ -484,7 +552,74 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
                   )}
                 </div>
               </Card>
-              
+              {/* Latest Status Update Details */}
+              {latestStatusUpdateEvent && (
+                <Card>
+                  <div className="p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Latest Status Update</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Status</h4>
+                        <div className="flex items-center">
+                          <StatusBadge status={latestStatusUpdateEvent.status} />
+                          <span className="text-sm font-medium text-gray-900 ml-2">
+                            {latestStatusUpdateEvent.status.replace(/_/g, " ")}
+                          </span>
+                        </div>
+                      </div>
+                      {latestStatusUpdateEvent.timestamp && (
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+                            Update Date
+                          </h4>
+                          <div className="flex items-center">
+                            <Calendar className="w-5 h-5 text-gray-400 mr-2" />
+                            <span className="text-sm font-medium text-gray-900">
+                              {formatDate(new Date(latestStatusUpdateEvent.timestamp))}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      {latestStatusUpdateEvent.notes && (
+                        <div className="bg-gray-50 p-4 rounded-lg md:col-span-2">
+                          <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Notes</h4>
+                          <p className="text-sm text-gray-900">{latestStatusUpdateEvent.notes}</p>
+                        </div>
+                      )}
+                      {latestStatusUpdateEvent.fileUrl && (
+                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 md:col-span-2">
+                          <h4 className="text-xs font-medium text-blue-700 uppercase tracking-wide mb-2">
+                            Attached Document
+                          </h4>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center">
+                              <FileText className="w-5 h-5 text-blue-600 mr-2" />
+                              <span className="text-sm font-semibold text-blue-900">
+                                {latestStatusUpdateEvent.fileType?.replace(/_/g, " ") || "Document"}
+                              </span>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                handleViewDocument({
+                                  name: latestStatusUpdateEvent.fileType?.replace(/_/g, " ") || "Attached Document",
+                                  type: latestStatusUpdateEvent.fileType,
+                                  fileUrl: latestStatusUpdateEvent.fileUrl,
+                                  status: DocumentStatus.VERIFIED, // Assuming it's verified if attached to a status update
+                                  notes: latestStatusUpdateEvent.notes,
+                                })
+                              }
+                            >
+                              View
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              )}
               {/* Recent Activity */}
               <Card>
                 <div className="p-6">
@@ -492,29 +627,26 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
                     <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
                     {timelineEvents.length > 3 && (
                       <button
-                        onClick={() => setActiveTab('timeline')}
+                        onClick={() => setActiveTab("timeline")}
                         className="text-sm text-blue-600 font-medium hover:text-blue-800 transition-colors"
                       >
                         View All →
                       </button>
                     )}
                   </div>
-                  <ShipmentTimeline 
-                    events={timelineEvents.slice(0, 3)}
-                    checkpoints={checkpoints}
-                  />
-                  
+                  <ShipmentTimeline events={timelineEvents.slice(0, 3)} checkpoints={checkpoints} />
                   {timelineEvents.length === 0 && (
                     <div className="text-center py-8">
                       <Clock className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                       <h3 className="text-lg font-medium text-gray-400">No Recent Activity</h3>
-                      <p className="text-sm text-gray-500 mt-2">Activity will appear here as the shipment progresses.</p>
+                      <p className="text-sm text-gray-500 mt-2">
+                        Activity will appear here as the shipment progresses.
+                      </p>
                     </div>
                   )}
                 </div>
               </Card>
             </div>
-            
             {/* Sidebar - Document Status */}
             <div>
               <Card>
@@ -525,17 +657,14 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
                       {completedDocs}/{totalRequiredDocs} Complete
                     </div>
                   </div>
-                  
                   <div className="space-y-3">
                     {requiredDocTypes.map((docType) => {
-                      const document = shipment.documents.find(d => d.type === docType);
-                      const status = document?.status || DocumentStatus.PENDING;
-                      
+                      const document = shipment.documents.find((d) => d.type === docType)
+                      const status = document?.status || DocumentStatus.PENDING
                       const docTypeLabel = docType
-                        .split('_')
-                        .map(word => word.charAt(0) + word.slice(1).toLowerCase())
-                        .join(' ');
-                      
+                        .split("_")
+                        .map((word) => word.charAt(0) + word.slice(1).toLowerCase())
+                        .join(" ")
                       return (
                         <div key={docType} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                           <div className="flex items-center">
@@ -544,29 +673,28 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
                           </div>
                           <StatusBadge status={status} />
                         </div>
-                      );
+                      )
                     })}
                   </div>
-                  
                   <div className="mt-6 pt-6 border-t border-gray-200">
                     <div className="mb-4">
                       <div className="flex justify-between text-sm text-gray-600 mb-2">
+                        {" "}
                         <span>Progress</span>
                         <span>{completionPercentage}%</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
+                        <div
                           className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                           style={{ width: `${completionPercentage}%` }}
                         />
                       </div>
                     </div>
-                    
                     <Button
                       variant="outline"
                       size="sm"
-                      className="w-full flex items-center justify-center gap-2"
-                      onClick={() => setActiveTab('documents')}
+                      className="w-full flex items-center justify-center gap-2 bg-transparent"
+                      onClick={() => setActiveTab("documents")}
                     >
                       <FileText className="w-4 h-4" />
                       Manage Documents
@@ -577,8 +705,7 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
             </div>
           </div>
         )}
-        
-        {activeTab === 'documents' && (
+        {activeTab === "documents" && (
           <div>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
               <div>
@@ -589,7 +716,7 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
                   {completedDocs} of {shipment.documents.length} documents verified
                 </p>
               </div>
-              <Button 
+              <Button
                 className="flex items-center gap-2 bg-[#0f2557] text-xs"
                 onClick={() => setIsUploadDialogOpen(true)}
               >
@@ -597,10 +724,9 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
                 Upload New Document
               </Button>
             </div>
-            
             <div className="grid gap-4">
               {shipment.documents.map((document) => (
-                <DocumentCard 
+                <DocumentCard
                   key={document.id}
                   document={{
                     id: document.id,
@@ -609,14 +735,13 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
                     status: document.status,
                     uploadedAt: document.uploadedAt,
                     fileUrl: document.fileUrl,
-                    notes: document.notes
+                    notes: document.notes,
                   }}
                   onViewClick={() => handleViewDocument(document)}
                   onVerifyClick={() => handleVerifyDocument(document.id)}
                   onRejectClick={() => handleRejectDocument(document.id)}
                 />
               ))}
-              
               {shipment.documents.length === 0 && (
                 <Card>
                   <div className="p-12 text-center">
@@ -625,10 +750,7 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
                     </div>
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No Documents Uploaded</h3>
                     <p className="text-gray-600 mb-6">Start by uploading the required documents for this shipment.</p>
-                    <Button 
-                      className="flex items-center gap-2"
-                      onClick={() => setIsUploadDialogOpen(true)}
-                    >
+                    <Button className="flex items-center gap-2" onClick={() => setIsUploadDialogOpen(true)}>
                       <Upload className="w-4 h-4" />
                       Upload First Document
                     </Button>
@@ -638,16 +760,11 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
             </div>
           </div>
         )}
-        
-        {activeTab === 'timeline' && (
+        {activeTab === "timeline" && (
           <Card>
             <div className="p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-6">Complete Timeline</h2>
-              <ShipmentTimeline 
-                events={timelineEvents}
-                checkpoints={checkpoints}
-              />
-              
+              <ShipmentTimeline events={timelineEvents} checkpoints={checkpoints} />
               {timelineEvents.length === 0 && (
                 <div className="text-center py-12">
                   <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
@@ -661,36 +778,41 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
           </Card>
         )}
       </div>
-
       {/* Update Status Dialog */}
       <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle>Update Shipment Status</DialogTitle>
-            <DialogDescription>
-              Change the status of shipment {shipment.reference}
-            </DialogDescription>
+            <DialogDescription>Change the status of shipment {shipment.reference}</DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
+          {/* Scrollable content starts here */}
+          <div className="grid gap-4 py-4 overflow-y-auto max-h-[60vh] pr-2">
             <div className="grid gap-2">
               <label htmlFor="status" className="text-sm font-medium">
                 Status
               </label>
-              <Select 
-                value={selectedStatus}
-                onValueChange={setSelectedStatus}
-              >
+              <Select value={selectedStatus} onValueChange={(value: ShipmentStatus) => setSelectedStatus(value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
                   {Object.values(ShipmentStatus).map((status) => (
                     <SelectItem key={status} value={status}>
-                      {status.replace(/_/g, ' ')}
+                      {status.replace(/_/g, " ")}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="grid gap-2">
+              <label htmlFor="status-date" className="text-sm font-medium">
+                Date (Optional)
+              </label>
+              <DatePicker
+                date={statusUpdateDate}
+                setDate={setStatusUpdateDate}
+                placeholder="Select date of status change"
+              />
             </div>
             <div className="grid gap-2">
               <label htmlFor="notes" className="text-sm font-medium">
@@ -704,26 +826,60 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
                 rows={3}
               />
             </div>
+            <div className="grid gap-2">
+              <label htmlFor="document-type" className="text-sm font-medium">
+                Attached Supporting Document Type (Optional) <br />
+                  <span className="text-xs text-orange-600">* Make sure you first upload the doc *</span>
+              </label>
+              <Select
+                value={statusUpdateFileType}
+                onValueChange={(value: DocumentType | "") => setStatusUpdateFileType(value)}
+                disabled={!statusUpdateFile}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select document type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.values(DocumentType).map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type.replace(/_/g, " ")}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <FileUploader
+                endpoint="fileUploads"
+                value={statusUpdateFile ? statusUpdateFile.url : ""} // Pass the URL
+                onChange={(url, name) => {
+                  setStatusUpdateFile(url ? { url, name } : null) // Store as { url, name } or null
+                  setFileUploaded(!!url)
+                  if (!url) setStatusUpdateFileType("")
+                }}
+                isUploaded={fileUploaded}
+                label="Upload Document (Optional)"
+                description="Drag and drop your document here or click to browse"
+              />
+            </div>
           </div>
+          {/* End of scrollable content */}
           <DialogFooter>
             <DialogClose asChild>
               <Button variant="outline">Cancel</Button>
             </DialogClose>
-            <Button 
+            <Button
               type="submit"
               className="bg-[#0f2557]"
               disabled={updateStatusMutation.isPending}
               onClick={handleStatusUpdate}
             >
-              {updateStatusMutation.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
+              {updateStatusMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Update Status
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="sm:max-w-md">
@@ -733,8 +889,8 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
               Delete Shipment
             </DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete shipment <strong>{shipment.reference}</strong>? 
-              This action cannot be undone and will permanently remove all associated data including documents and timeline events.
+              Are you sure you want to delete shipment <strong>{shipment.reference}</strong>? This action cannot be
+              undone and will permanently remove all associated data including documents and timeline events.
             </DialogDescription>
           </DialogHeader>
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 my-4">
@@ -742,9 +898,7 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
               <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
               <div>
                 <h4 className="text-sm font-medium text-red-800 mb-1">Warning</h4>
-                <p className="text-sm text-red-700">
-                  This will permanently delete:
-                </p>
+                <p className="text-sm text-red-700">This will permanently delete:</p>
                 <ul className="text-sm text-red-700 mt-2 list-disc list-inside space-y-1">
                   <li>Shipment details and tracking information</li>
                   <li>All uploaded documents ({shipment.documents.length} files)</li>
@@ -758,39 +912,33 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
             <DialogClose asChild>
               <Button variant="outline">Cancel</Button>
             </DialogClose>
-            <Button 
+            <Button
               variant="destructive"
               disabled={deleteShipmentMutation.isPending}
               onClick={handleDeleteShipment}
               className="bg-red-600 hover:bg-red-700"
             >
-              {deleteShipmentMutation.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
+              {deleteShipmentMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Delete Shipment
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
       {/* View Document Dialog */}
       <Dialog open={isViewDocumentDialogOpen} onOpenChange={setIsViewDocumentDialogOpen}>
         <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>Document Details</DialogTitle>
-            <DialogDescription>
-              {selectedDocument?.name}
-            </DialogDescription>
+            <DialogDescription>{selectedDocument?.name}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="flex items-center justify-between bg-gray-50 p-4 rounded-lg">
               <div>
                 <p className="text-sm font-medium text-gray-900">Document Type</p>
-                <p className="text-sm text-gray-600">{selectedDocument?.type?.replace(/_/g, ' ')}</p>
+                <p className="text-sm text-gray-600">{selectedDocument?.type?.replace(/_/g, " ")}</p>
               </div>
               <StatusBadge status={selectedDocument?.status} />
             </div>
-            
             <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center relative">
               {selectedDocument?.fileUrl ? (
                 <iframe
@@ -805,7 +953,6 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
                 </div>
               )}
             </div>
-            
             {selectedDocument?.notes && (
               <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
                 <p className="text-sm text-gray-600">
@@ -821,7 +968,6 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
       {/* Upload Document Dialog */}
       <DocumentUploadForm
         isOpen={isUploadDialogOpen}
@@ -829,18 +975,11 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
         onSubmit={handleUploadDocument}
         isSubmitting={createDocumentMutation.isPending}
         shipmentReference={shipment?.reference}
-        isReference={false} 
+        isReference={false}
         documents={shipment.documents}
       />
-
       {/* Export Dialog */}
-      <ExportDialog 
-        isOpen={isExportDialogOpen} 
-        onOpenChange={setIsExportDialogOpen} 
-        shipment={shipment} 
-      />
+      <ExportDialog isOpen={isExportDialogOpen} onOpenChange={setIsExportDialogOpen} shipment={shipment} />
     </div>
-  );
-};
-
-export default ShipmentDetail;
+  )
+}

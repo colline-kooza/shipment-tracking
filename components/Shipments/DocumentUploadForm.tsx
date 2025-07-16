@@ -51,6 +51,7 @@ const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
   [DocumentType.TAX_EXEMPTION]: "Tax Exemption",
   [DocumentType.CERTIFICATE_OF_ORIGIN]: "Certificate of Origin",
   [DocumentType.CMR_WAYBILL]: "CMR Waybill",
+  [DocumentType.LETTER_OF_AUTHORIZATION]: "Letter Of Authorization",
 }
 
 // All document types - moved outside to prevent recreation

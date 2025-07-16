@@ -109,7 +109,6 @@ export async function updateShipmentStatusWithNotifications(
 export async function getShipmentsNeedingAttention() {
   try {
     const currentDate = new Date();
-
     // Get delayed shipments
     const delayedShipments = await db.shipment.findMany({
       where: {
@@ -117,7 +116,7 @@ export async function getShipmentsNeedingAttention() {
           lt: currentDate,
         },
         status: {
-          notIn: [ShipmentStatus.DELIVERED, ShipmentStatus.COMPLETED],
+          notIn: [ShipmentStatus.DELIVERED, ShipmentStatus.EMPTY_RETURNED],
         },
       },
       include: {
@@ -128,7 +127,6 @@ export async function getShipmentsNeedingAttention() {
         arrivalDate: "asc",
       },
     });
-
     // Get shipments with pending documents
     const shipmentsWithPendingDocs = await db.shipment.findMany({
       where: {
@@ -138,7 +136,7 @@ export async function getShipmentsNeedingAttention() {
           },
         },
         status: {
-          notIn: [ShipmentStatus.DELIVERED, ShipmentStatus.COMPLETED],
+          notIn: [ShipmentStatus.DELIVERED, ShipmentStatus.EMPTY_RETURNED],
         },
       },
       include: {
@@ -153,14 +151,14 @@ export async function getShipmentsNeedingAttention() {
         createdAt: "desc",
       },
     });
-
     return {
       success: true,
       data: {
         delayed: delayedShipments.map((shipment) => ({
           ...shipment,
           daysDelayed: Math.ceil(
-            (currentDate.getTime() - new Date(shipment.arrivalDate).getTime()) /
+            (currentDate.getTime() -
+              new Date(shipment.arrivalDate ?? new Date()).getTime()) /
               (1000 * 60 * 60 * 24)
           ),
         })),

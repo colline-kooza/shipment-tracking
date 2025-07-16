@@ -1,13 +1,13 @@
-"use client";
-
-import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { 
-  Ship, 
-  Search, 
-  Calendar, 
-  AlertCircle, 
-  RefreshCw, 
+"use client"
+import type React from "react"
+import { useState, useEffect } from "react"
+import Link from "next/link"
+import {
+  Ship,
+  Search,
+  Calendar,
+  AlertCircle,
+  RefreshCw,
   Package,
   CheckCircle2,
   Clock,
@@ -16,161 +16,162 @@ import {
   BarChart3,
   Anchor,
   Info,
-  FileText
-} from 'lucide-react';
-import { format } from 'date-fns';
-import { ShipmentStatus } from '@prisma/client';
+  FileText,
+} from "lucide-react"
+import { format } from "date-fns"
+import { ShipmentStatus } from "@prisma/client"
 
 // Component imports
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Avatar } from '@/components/ui/avatar';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Card } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 // Import types and hooks
-import { SeaFreightFilter, SeaFreightShipment } from '@/types/sea-freight-types';
-import { getDocumentStatus, useSeaFreightShipments, useSeaFreightStats } from '@/hooks/useSeaFreights';
-import { Shipment } from '@/types/shipments';
+import type { SeaFreightFilter, SeaFreightShipment } from "@/types/sea-freight-types"
+import { getDocumentStatus, useSeaFreightShipments, useSeaFreightStats } from "@/hooks/useSeaFreights"
 
 export default function SeaFreightPage() {
   // State
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<ShipmentStatus | 'all'>('all');
-  const [containerFilter, setContainerFilter] = useState<string>('');
-  
+  const [searchQuery, setSearchQuery] = useState<string>("")
+  const [activeTab, setActiveTab] = useState<ShipmentStatus | "all">("all")
+  const [containerFilter, setContainerFilter] = useState<string>("")
+
   // Create filter object for React Query
   const [filters, setFilters] = useState<SeaFreightFilter>({
-    status: 'all',
-    search: '',
-    container: '',
-  });
+    status: "all",
+    search: "",
+    container: "",
+  })
 
   // Use React Query to fetch shipments and stats
-  const { data: shipmentsResponse, isLoading, isError, error, refetch } = useSeaFreightShipments(filters);
-  const { data: statsResponse, isLoading: statsLoading } = useSeaFreightStats();
-  
-const shipments: SeaFreightShipment[] = shipmentsResponse?.data || [];
-  const stats = statsResponse?.data;
+  const { data: shipmentsResponse, isLoading, isError, error, refetch } = useSeaFreightShipments(filters)
+  const { data: statsResponse, isLoading: statsLoading } = useSeaFreightStats()
+  const shipments: SeaFreightShipment[] = shipmentsResponse?.data || []
+  const stats = statsResponse?.data
 
   // Update filters when inputs change
   useEffect(() => {
     const timer = setTimeout(() => {
-      setFilters(prev => ({
+      setFilters((prev) => ({
         ...prev,
         status: activeTab,
         search: searchQuery,
         container: containerFilter,
-      }));
-    }, 300); // Debounce search/filter updates
-
-    return () => clearTimeout(timer);
-  }, [searchQuery, activeTab, containerFilter]);
+      }))
+    }, 300) // Debounce search/filter updates
+    return () => clearTimeout(timer)
+  }, [searchQuery, activeTab, containerFilter])
 
   // Reset filters function
   const resetFilters = () => {
-    setSearchQuery('');
-    setActiveTab('all');
-    setContainerFilter('');
+    setSearchQuery("")
+    setActiveTab("all")
+    setContainerFilter("")
     setFilters({
-      status: 'all',
-      search: '',
-      container: '',
-    });
-  };
+      status: "all",
+      search: "",
+      container: "",
+    })
+  }
 
   // Count shipments by status for badges
-  const getStatusCount = (status: ShipmentStatus | 'all') => {
-    if (status === 'all') return shipments.length;
-    return shipments.filter(ship => ship.status === status).length;
-  };
-  
+  const getStatusCount = (status: ShipmentStatus | "all") => {
+    if (status === "all") return shipments.length
+    return shipments.filter((ship) => ship.status === status).length
+  }
 
   // Format date for display
   const formatShipmentDate = (date: string | Date) => {
-    return format(new Date(date), 'MMM dd, yyyy');
-  };
+    return format(new Date(date), "MMM dd, yyyy")
+  }
 
   // Get CSS class based on status
   const getStatusClass = (status: ShipmentStatus) => {
     switch (status) {
       case ShipmentStatus.CREATED:
       case ShipmentStatus.DOCUMENT_RECEIVED:
-        return 'bg-blue-100 text-blue-800';
+      case ShipmentStatus.DOCUMENTS_SENT: // New status
+        return "bg-blue-100 text-blue-800"
       case ShipmentStatus.IN_TRANSIT:
       case ShipmentStatus.CARGO_ARRIVED:
+      case ShipmentStatus.TRANSFERRED_TO_CFS: // New status
       case ShipmentStatus.ENTRY_REGISTERED:
-      case ShipmentStatus.CLEARED:
-        return 'bg-amber-100 text-amber-800';
+      case ShipmentStatus.CUSTOM_RELEASED: // Renamed from CLEARED
+      case ShipmentStatus.DELIVERY_ORDER_OBTAINED: // New status
+      case ShipmentStatus.TAXES_PAID: // New status
+      case ShipmentStatus.NIMULE_BORDER_RELEASED: // New status
+        return "bg-amber-100 text-amber-800"
       case ShipmentStatus.DELIVERED:
-        return 'bg-green-100 text-green-800';
-      case ShipmentStatus.COMPLETED:
-        return 'bg-emerald-100 text-emerald-800';
+        return "bg-green-100 text-green-800"
+      case ShipmentStatus.EMPTY_RETURNED: // Renamed from COMPLETED
+        return "bg-emerald-100 text-emerald-800"
       case ShipmentStatus.DOCUMENT_REJECTED:
-        return 'bg-red-100 text-red-800';
+        return "bg-red-100 text-red-800"
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800"
     }
-  };
+  }
 
   // Check if any filters are active
-  const filtersActive = searchQuery !== '' || activeTab !== 'all' || containerFilter !== '';
+  const filtersActive = searchQuery !== "" || activeTab !== "all" || containerFilter !== ""
 
   // Render functions for different components
   const renderStatusBadge = (status: ShipmentStatus) => {
-    const statusMap: Record<ShipmentStatus, { icon: React.ReactNode, label: string }> = {
-      [ShipmentStatus.CREATED]: { icon: <Clock size={14} />, label: 'Created' },
-      [ShipmentStatus.DOCUMENT_RECEIVED]: { icon: <Clock size={14} />, label: 'Docs Received' },
-      [ShipmentStatus.DOCUMENTS_SENT]: { icon: <Clock size={14} />, label: 'Docs Sent' },
-      [ShipmentStatus.IN_TRANSIT]: { icon: <Ship size={14} />, label: 'In Transit' },
-      [ShipmentStatus.CARGO_ARRIVED]: { icon: <Anchor size={14} />, label: 'Cargo Arrived' },
-      [ShipmentStatus.ENTRY_REGISTERED]: { icon: <Package size={14} />, label: 'Entry Registered' },
-      [ShipmentStatus.CLEARED]: { icon: <CheckCircle2 size={14} />, label: 'Cleared' },
-      [ShipmentStatus.DELIVERED]: { icon: <CheckCircle2 size={14} />, label: 'Delivered' },
-      [ShipmentStatus.COMPLETED]: { icon: <CheckCircle2 size={14} />, label: 'Completed' },
-      [ShipmentStatus.DOCUMENT_REJECTED]: { icon: <XCircle size={14} />, label: 'Doc Rejected' },
-      [ShipmentStatus.DELIVERY_CONFIRMED]: { icon: <CheckCircle2 size={14} />, label: 'Delivery Confirmed' },
-    };
-
-    const statusInfo = statusMap[status] || { icon: <Clock size={14} />, label: status };
-
+    const statusMap: Record<ShipmentStatus, { icon: React.ReactNode; label: string }> = {
+      [ShipmentStatus.CREATED]: { icon: <Clock size={14} />, label: "Created" },
+      [ShipmentStatus.DOCUMENT_RECEIVED]: { icon: <Clock size={14} />, label: "Docs Received" },
+      [ShipmentStatus.DOCUMENTS_SENT]: { icon: <Clock size={14} />, label: "Docs Sent" },
+      [ShipmentStatus.IN_TRANSIT]: { icon: <Ship size={14} />, label: "In Transit" },
+      [ShipmentStatus.CARGO_ARRIVED]: { icon: <Anchor size={14} />, label: "Cargo Arrived" },
+      [ShipmentStatus.TRANSFERRED_TO_CFS]: { icon: <Package size={14} />, label: "Transferred to CFS" },
+      [ShipmentStatus.ENTRY_REGISTERED]: { icon: <Package size={14} />, label: "Entry Registered" },
+      [ShipmentStatus.CUSTOM_RELEASED]: { icon: <CheckCircle2 size={14} />, label: "Customs Released" }, // Renamed
+      [ShipmentStatus.DELIVERY_ORDER_OBTAINED]: { icon: <FileText size={14} />, label: "DO Obtained" },
+      [ShipmentStatus.TAXES_PAID]: { icon: <Info size={14} />, label: "Taxes Paid" },
+      [ShipmentStatus.NIMULE_BORDER_RELEASED]: { icon: <CheckCircle2 size={14} />, label: "Nimule Released" },
+      [ShipmentStatus.DELIVERED]: { icon: <CheckCircle2 size={14} />, label: "Delivered" },
+      [ShipmentStatus.EMPTY_RETURNED]: { icon: <CheckCircle2 size={14} />, label: "Empty Returned" }, // Renamed
+      [ShipmentStatus.DOCUMENT_REJECTED]: { icon: <XCircle size={14} />, label: "Doc Rejected" },
+    }
+    const statusInfo = statusMap[status] || { icon: <Clock size={14} />, label: status }
     return (
       <Badge className={`flex items-center gap-1 ${getStatusClass(status)}`}>
         {statusInfo.icon}
         {statusInfo.label}
       </Badge>
-    );
-  };
+    )
+  }
 
   const renderDocumentStatusBadge = (shipment: SeaFreightShipment) => {
-    const docStatus = getDocumentStatus(shipment);
-    
+    const docStatus = getDocumentStatus(shipment)
+
     const badgeClasses: Record<string, string> = {
-      'missing': 'bg-gray-100 text-gray-800',
-      'rejected': 'bg-red-100 text-red-800',
-      'pending': 'bg-yellow-100 text-yellow-800',
-      'verified': 'bg-green-100 text-green-800',
-    };
-    
+      missing: "bg-gray-100 text-gray-800",
+      rejected: "bg-red-100 text-red-800",
+      pending: "bg-yellow-100 text-yellow-800",
+      verified: "bg-green-100 text-green-800",
+    }
+
     const icons: Record<string, React.ReactNode> = {
-      'missing': <AlertCircle size={14} />,
-      'rejected': <XCircle size={14} />,
-      'pending': <Clock size={14} />,
-      'verified': <CheckCircle2 size={14} />,
-    };
-    
+      missing: <AlertCircle size={14} />,
+      rejected: <XCircle size={14} />,
+      pending: <Clock size={14} />,
+      verified: <CheckCircle2 size={14} />,
+    }
+
     // Type assertion to ensure type safety
-    const status = docStatus.status as keyof typeof badgeClasses;
-    
+    const status = docStatus.status as keyof typeof badgeClasses
+
     return (
       <Badge className={`flex items-center gap-1 ${badgeClasses[status]}`}>
         {icons[status]}
         {docStatus.label}
       </Badge>
-    );
-  };
+    )
+  }
 
   const renderStats = () => {
     if (statsLoading) {
@@ -183,27 +184,23 @@ const shipments: SeaFreightShipment[] = shipmentsResponse?.data || [];
             </Card>
           ))}
         </div>
-      );
+      )
     }
-
-    if (!stats) return null;
-
-
-
+    if (!stats) return null
     return (
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <Card className="p-4 border-l-4 border-l-[#0f2557] hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-500">Total Shipments</p>
-              <h3 className="text-2xl font-bold text-gray-900">{getStatusCount('all')}</h3>
+              <h3 className="text-2xl font-bold text-gray-900">{getStatusCount("all")}</h3>
             </div>
             <div className="bg-blue-100 p-3 rounded-full">
               <BarChart3 className="h-6 w-6 text-[#0f2557]" />
             </div>
           </div>
         </Card>
-        
+
         <Card className="p-4 border-l-4 border-l-amber-500 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
@@ -215,7 +212,7 @@ const shipments: SeaFreightShipment[] = shipmentsResponse?.data || [];
             </div>
           </div>
         </Card>
-        
+
         <Card className="p-4 border-l-4 border-l-green-500 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
@@ -239,8 +236,8 @@ const shipments: SeaFreightShipment[] = shipmentsResponse?.data || [];
           </div>
         </Card>
       </div>
-    );
-  };
+    )
+  }
 
   const renderShipmentCards = () => {
     if (isLoading) {
@@ -265,9 +262,8 @@ const shipments: SeaFreightShipment[] = shipmentsResponse?.data || [];
             </Card>
           ))}
         </>
-      );
+      )
     }
-
     if (isError) {
       return (
         <Card className="p-6 flex flex-col items-center text-center">
@@ -276,19 +272,15 @@ const shipments: SeaFreightShipment[] = shipmentsResponse?.data || [];
           </div>
           <h3 className="text-xl font-bold text-gray-900 mb-2">Error Loading Shipments</h3>
           <p className="text-gray-600 mb-4">
-            {error instanceof Error ? error.message : 'Failed to load shipments data. Please try again.'}
+            {error instanceof Error ? error.message : "Failed to load shipments data. Please try again."}
           </p>
-          <Button 
-            onClick={() => refetch()} 
-            className="flex items-center gap-2 bg-[#0f2557]"
-          >
+          <Button onClick={() => refetch()} className="flex items-center gap-2 bg-[#0f2557]">
             <RefreshCw size={16} />
             Retry
           </Button>
         </Card>
-      );
+      )
     }
-
     if (shipments.length === 0) {
       return (
         <Card className="p-8 flex flex-col items-center text-center">
@@ -297,16 +289,12 @@ const shipments: SeaFreightShipment[] = shipmentsResponse?.data || [];
           </div>
           <h3 className="text-xl font-bold text-gray-900 mb-2">No Shipments Found</h3>
           <p className="text-gray-600 mb-6 max-w-md">
-            {filtersActive 
-              ? 'No shipments match your current filters. Try adjusting your search criteria.'
-              : 'There are no sea freight shipments in the system yet.'}
+            {filtersActive
+              ? "No shipments match your current filters. Try adjusting your search criteria."
+              : "There are no sea freight shipments in the system yet."}
           </p>
           {filtersActive ? (
-            <Button 
-              onClick={resetFilters}
-              variant="outline"
-              className="flex items-center gap-2"
-            >
+            <Button onClick={resetFilters} variant="outline" className="flex items-center gap-2 bg-transparent">
               <RefreshCw size={16} />
               Reset Filters
             </Button>
@@ -319,13 +307,12 @@ const shipments: SeaFreightShipment[] = shipmentsResponse?.data || [];
             </Link>
           )}
         </Card>
-      );
+      )
     }
-
     return (
       <>
         {shipments.map((shipment: SeaFreightShipment) => (
-          <Link href={`/dashboard/shipments/${shipment.id}`} key={shipment.id}>
+          <Link href={`/dashboard/shipments-trakit/${shipment.id}`} key={shipment.id}>
             <Card className="mb-4 p-4 hover:shadow-md transition-shadow border-l-4 border-l-transparent hover:border-l-[#0f2557]">
               <div className="flex flex-col gap-3">
                 {/* Header - Reference and Client */}
@@ -353,22 +340,16 @@ const shipments: SeaFreightShipment[] = shipmentsResponse?.data || [];
                       {shipment.Customer?.company && ` - ${shipment.Customer.company}`}
                     </p>
                   </div>
-                  <div>
-                    {renderStatusBadge(shipment.status)}
-                  </div>
+                  <div>{renderStatusBadge(shipment.status)}</div>
                 </div>
-                
+
                 {/* Route */}
                 <div className="flex items-center gap-2 text-sm text-gray-600 my-1">
-                  <div className="px-3 py-1 bg-gray-100 rounded-md">
-                    {shipment.origin}
-                  </div>
+                  <div className="px-3 py-1 bg-gray-100 rounded-md">{shipment.origin}</div>
                   <ArrowRight size={16} className="text-gray-400" />
-                  <div className="px-3 py-1 bg-gray-100 rounded-md">
-                    {shipment.destination}
-                  </div>
+                  <div className="px-3 py-1 bg-gray-100 rounded-md">{shipment.destination}</div>
                 </div>
-                
+
                 {/* Info Row - Dates & Status badges */}
                 <div className="flex flex-wrap items-center justify-between gap-2 mt-1">
                   <div className="flex items-center gap-3">
@@ -376,7 +357,7 @@ const shipments: SeaFreightShipment[] = shipmentsResponse?.data || [];
                       <Calendar size={16} className="mr-1 text-gray-500" />
                       <span>Arrival: {formatShipmentDate(shipment.arrivalDate)}</span>
                     </div>
-                    
+
                     {shipment.TrackingEvent && shipment.TrackingEvent.length > 0 && (
                       <div className="flex items-center text-sm text-gray-600">
                         <Clock size={16} className="mr-1 text-gray-500" />
@@ -384,10 +365,14 @@ const shipments: SeaFreightShipment[] = shipmentsResponse?.data || [];
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="flex gap-2 items-center">
                     {renderDocumentStatusBadge(shipment)}
-                    <Button variant="outline" size="sm" className="h-8 gap-1 text-xs flex items-center group">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 gap-1 text-xs flex items-center group bg-transparent"
+                    >
                       <FileText size={14} />
                       <span>View Details</span>
                       <ArrowRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity ml-1" />
@@ -399,8 +384,8 @@ const shipments: SeaFreightShipment[] = shipmentsResponse?.data || [];
           </Link>
         ))}
       </>
-    );
-  };
+    )
+  }
 
   return (
     <div className="p-4 max-w-7xl mx-auto">
@@ -410,16 +395,11 @@ const shipments: SeaFreightShipment[] = shipmentsResponse?.data || [];
           <h1 className="text-2xl font-bold text-gray-900">Sea Freight Shipments</h1>
         </div>
         <div className="flex gap-2">
-          <Button 
-            onClick={() => refetch()} 
-            variant="outline" 
-            size="sm" 
-            className="flex items-center gap-1 h-10"
-          >
+          <Button onClick={() => refetch()} variant="outline" size="sm" className="flex items-center gap-1 h-10">
             <RefreshCw size={16} />
             Refresh
           </Button>
-          <Link href="/dashboard/shipments/new?type=SEA">
+          <Link href="/dashboard/shipments-trakit/new?type=SEA">
             <Button className="bg-[#0f2557] text-white flex items-center gap-2 h-10">
               <Ship size={16} />
               New Sea Shipment
@@ -432,12 +412,12 @@ const shipments: SeaFreightShipment[] = shipmentsResponse?.data || [];
       {renderStats()}
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ShipmentStatus | 'all')} className="mb-6">
-        <TabsList className="grid grid-cols-5 md:grid-cols-5 lg:grid-cols-6 w-full max-w-4xl">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ShipmentStatus | "all")} className="mb-6">
+        <TabsList className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-7 w-full max-w-4xl">
           <TabsTrigger value="all" className="flex items-center justify-center">
             All
             <Badge variant="secondary" className="ml-2 bg-gray-100 text-gray-700">
-              {getStatusCount('all')}
+              {getStatusCount("all")}
             </Badge>
           </TabsTrigger>
           <TabsTrigger value={ShipmentStatus.IN_TRANSIT} className="flex items-center justify-center">
@@ -452,16 +432,22 @@ const shipments: SeaFreightShipment[] = shipmentsResponse?.data || [];
               {getStatusCount(ShipmentStatus.CARGO_ARRIVED)}
             </Badge>
           </TabsTrigger>
-          <TabsTrigger value={ShipmentStatus.CLEARED} className="flex items-center justify-center">
-            Cleared
+          <TabsTrigger value={ShipmentStatus.CUSTOM_RELEASED} className="flex items-center justify-center">
+            Customs Released
             <Badge variant="secondary" className="ml-2 bg-green-100 text-green-700">
-              {getStatusCount(ShipmentStatus.CLEARED)}
+              {getStatusCount(ShipmentStatus.CUSTOM_RELEASED)}
             </Badge>
           </TabsTrigger>
           <TabsTrigger value={ShipmentStatus.DELIVERED} className="flex items-center justify-center">
             Delivered
             <Badge variant="secondary" className="ml-2 bg-green-100 text-green-700">
               {getStatusCount(ShipmentStatus.DELIVERED)}
+            </Badge>
+          </TabsTrigger>
+          <TabsTrigger value={ShipmentStatus.EMPTY_RETURNED} className="flex items-center justify-center">
+            Returned
+            <Badge variant="secondary" className="ml-2 bg-emerald-100 text-emerald-700">
+              {getStatusCount(ShipmentStatus.EMPTY_RETURNED)}
             </Badge>
           </TabsTrigger>
           <TabsTrigger value={ShipmentStatus.DOCUMENT_REJECTED} className="hidden md:flex items-center justify-center">
@@ -488,7 +474,7 @@ const shipments: SeaFreightShipment[] = shipmentsResponse?.data || [];
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          
+
           <div className="flex gap-2">
             <div className="w-44">
               <div className="relative">
@@ -504,13 +490,13 @@ const shipments: SeaFreightShipment[] = shipmentsResponse?.data || [];
                 />
               </div>
             </div>
-            
+
             {filtersActive && (
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={resetFilters}
-                className="flex items-center gap-1 h-10"
+                className="flex items-center gap-1 h-10 bg-transparent"
               >
                 <RefreshCw size={14} />
                 Reset Filters
@@ -519,9 +505,9 @@ const shipments: SeaFreightShipment[] = shipmentsResponse?.data || [];
           </div>
         </div>
       </Card>
-      
+
       {/* Shipment Cards */}
       {renderShipmentCards()}
     </div>
-  );
+  )
 }

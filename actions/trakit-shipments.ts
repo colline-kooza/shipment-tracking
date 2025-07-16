@@ -3,10 +3,11 @@
 import { getAuthUser } from "@/config/useAuth";
 import { db } from "@/prisma/db";
 import { revalidatePath } from "next/cache";
-import { ShipmentType } from "@prisma/client";
+import { DocumentStatus, ShipmentStatus, ShipmentType } from "@prisma/client";
 import { generateShipmentReference } from "@/utils/shipmentUtils";
 import ShipmentStatusUpdateEmail from "@/components/emails/sendShipmentStatusUpdate";
 import { Resend } from "resend";
+import { DocumentType2 } from "@/hooks/useShipmentQueries2";
 
 // Define DTO types
 export type DocumentUpload = {
@@ -30,6 +31,7 @@ export type CreateShipmentDTO = {
   container?: string;
   truck?: string;
   documents: DocumentUpload[];
+  airwayBillNumber?: string | null;
 };
 
 export type ShipmentFilters = {
@@ -46,7 +48,7 @@ export type ShipmentListItem = {
   id: string;
   reference: string;
   trackingNumber: string | null;
-  client: string | null;
+  consignee: string | null;
   origin: string;
   destination: string;
   status: string;
@@ -113,7 +115,7 @@ async function sendShipmentStatusUpdateEmail(
     }
 
     const response = await resend.emails.send({
-      from: "Shipments <orders@rwoma.com>",
+      from: "Shipments <info@lubegajovan.com>",
       to: [customerEmail],
       subject: `Shipment Update - ${shipmentData.reference}`,
       react: ShipmentStatusUpdateEmail({
@@ -149,7 +151,7 @@ async function sendShipmentCreationEmail(
 
     console.log(customerEmail, "email");
     const response = await resend.emails.send({
-      from: "Shipments <orders@rwoma.com>",
+      from: "Shipments <info@lubegajovan.com>",
       to: [customerEmail],
       subject: `New Shipment Created - ${shipmentData.reference}`,
       react: ShipmentStatusUpdateEmail({
@@ -210,7 +212,7 @@ export async function createShipment(data: CreateShipmentDTO) {
 
     const reference =
       data.reference || (await generateShipmentReference(data.type));
-
+    // console.log(data.airwayBillNumber, "nuuuuuu");
     const shipment = await db.shipment.create({
       data: {
         reference,
@@ -226,7 +228,7 @@ export async function createShipment(data: CreateShipmentDTO) {
         trackingNumber: data.trackingNumber,
         createdBy: user.id,
         status: "CREATED",
-
+        airwayBillNumber: data.airwayBillNumber,
         timeline: {
           create: {
             status: "CREATED",
@@ -316,12 +318,13 @@ export async function createShipment(data: CreateShipmentDTO) {
 
 export async function updateShipmentStatus(
   id: string,
-  status: string,
-  notes?: string
+  status: ShipmentStatus,
+  notes?: string,
+  statusDate?: string,
+  documentFile?: { url: string; name: string; type: DocumentType2 }
 ) {
   try {
     const user = await getAuthUser();
-
     if (!user?.id) {
       return {
         success: false,
@@ -330,7 +333,6 @@ export async function updateShipmentStatus(
       };
     }
 
-    // Get current shipment data before updating
     const currentShipment = await db.shipment.findUnique({
       where: { id },
       select: {
@@ -361,10 +363,13 @@ export async function updateShipmentStatus(
 
     const previousStatus = currentShipment.status;
 
-    // Update shipment status
+    // Update shipment status and statusUpdateDate
     const updatedShipment = await db.shipment.update({
       where: { id },
-      data: { status: status as any },
+      data: {
+        status: status,
+        statusUpdateDate: statusDate ? new Date(statusDate) : undefined,
+      },
     });
 
     // Send email notification to customer if status changed
@@ -386,20 +391,18 @@ export async function updateShipmentStatus(
           createdAt: currentShipment.createdAt,
           consignee: currentShipment.consignee,
         };
-
         const emailResult = await sendShipmentStatusUpdateEmail(
           customer.email,
           shipmentEmailData,
           previousStatus,
           notes
         );
-        console.log(emailResult, "these are email results");
+
         if (!emailResult.success) {
           console.warn(
             "Failed to send shipment status update email:",
             emailResult.error
           );
-          // Continue with the process even if email fails
         }
       }
     }
@@ -408,11 +411,34 @@ export async function updateShipmentStatus(
     await db.timelineEvent.create({
       data: {
         shipmentId: id,
-        status: status as any,
+        status: status,
         notes: notes || `Status updated to ${status}`,
         createdBy: user.id,
+        timestamp: statusDate ? new Date(statusDate) : new Date(),
+        fileUrl: documentFile?.url || null,
+        fileType: documentFile?.type || null,
       },
     });
+
+    // If a document was provided, create a new Document entry
+    if (
+      documentFile &&
+      documentFile.name &&
+      documentFile.url &&
+      documentFile.type
+    ) {
+      await db.document.create({
+        data: {
+          name: documentFile.name,
+          type: documentFile.type,
+          fileUrl: documentFile.url,
+          userId: user.id,
+          shipmentId: id,
+          notes: `Document attached with status update to ${status}`,
+          status: DocumentStatus.VERIFIED,
+        },
+      });
+    }
 
     revalidatePath(`/dashboard/shipments/${id}`);
     revalidatePath("/dashboard/shipments");
@@ -478,7 +504,7 @@ export async function getShipments(
     select: {
       id: true,
       reference: true,
-      client: true,
+      consignee: true,
       origin: true,
       destination: true,
       status: true,

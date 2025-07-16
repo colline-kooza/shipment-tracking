@@ -52,7 +52,7 @@ export const ShipmentCard: React.FC<ShipmentCardProps> = ({ shipment }) => {
             </div>
             <div className="mt-2 flex items-center text-sm text-gray-600">
               <User size={16} className="mr-2 text-gray-400" /> 
-              <span>{shipment.client}</span>
+              <span>{shipment.consignee}</span>
             </div>
           </div>
           <StatusBadge status={shipment.status} />

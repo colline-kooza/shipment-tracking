@@ -52,7 +52,7 @@ export const StatCard: React.FC<StatCardProps> = ({
     }
   };
 
-  const { bg, iconBg, textColor } = colorMap[color];
+  const { bg, iconBg } = colorMap[color];
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-200">

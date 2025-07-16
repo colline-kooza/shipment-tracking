@@ -109,11 +109,9 @@ export function useUpdateDocumentStatus() {
     mutationFn: async ({
       id,
       status,
-      notes,
     }: {
       id: string;
       status: DocumentStatus;
-      notes?: string;
     }) => {
       const response = await updateDocumentStatus(id, status);
       if (!response.success) {

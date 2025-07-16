@@ -43,6 +43,8 @@ const TYPE_OPTIONS: { value: DocumentType | "all"; label: string }[] = [
   { value: DocumentType.TAX_EXEMPTION, label: "Tax Exemption" },
   { value: DocumentType.CERTIFICATE_OF_ORIGIN, label: "Certificate of Origin" },
   { value: DocumentType.CMR_WAYBILL, label: "CMR Waybill" },
+
+  { value: DocumentType.LETTER_OF_AUTHORIZATION, label: "Letter of Authorization" },
 ] as const;
 
 // Status options factory function

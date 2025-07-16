@@ -28,6 +28,6 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     "app/(docs)/docs/developer-marketing.mdx"
-  ],
+, "run-migration.s"  ],
   "exclude": ["node_modules"]
 }

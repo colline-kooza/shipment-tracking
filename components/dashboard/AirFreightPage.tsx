@@ -1,15 +1,13 @@
-"use client";
-
-import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { 
-  Plane, 
-  Search, 
-  Calendar, 
-  Filter, 
-  AlertCircle, 
-  Loader2, 
-  RefreshCw, 
+"use client"
+import type React from "react"
+import { useState, useEffect } from "react"
+import Link from "next/link"
+import {
+  Plane,
+  Search,
+  Calendar,
+  AlertCircle,
+  RefreshCw,
   Package,
   CheckCircle2,
   Clock,
@@ -18,158 +16,161 @@ import {
   BarChart3,
   Info,
   FileText,
-  CheckCircle
-} from 'lucide-react';
-import { format } from 'date-fns';
-import { ShipmentStatus } from '@prisma/client';
+} from "lucide-react"
+import { format } from "date-fns"
+import { ShipmentStatus } from "@prisma/client"
 
 // Component imports
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Card } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 // Import types and hooks
-import { AirFreightFilter, AirFreightShipment } from '@/types/air-freight-types';
-
-import { getDocumentStatus, useAirFreightShipments, useAirFreightStats } from '@/hooks/useAirFreight';
+import type { AirFreightFilter, AirFreightShipment } from "@/types/air-freight-types"
+import { getDocumentStatus, useAirFreightShipments, useAirFreightStats } from "@/hooks/useAirFreight"
 
 export default function AirFreightPage() {
   // State
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<ShipmentStatus | 'all'>('all');
-  const [airWaybillFilter, setAirWaybillFilter] = useState<string>('');
-  
+  const [searchQuery, setSearchQuery] = useState<string>("")
+  const [activeTab, setActiveTab] = useState<ShipmentStatus | "all">("all")
+  const [airWaybillFilter, setAirWaybillFilter] = useState<string>("")
+
   // Create filter object for React Query
   const [filters, setFilters] = useState<AirFreightFilter>({
-    status: 'all',
-    search: '',
-    airWaybill: '',
-  });
+    status: "all",
+    search: "",
+    airWaybill: "",
+  })
 
   // Use React Query to fetch shipments and stats
-  const { data: shipmentsResponse, isLoading, isError, error, refetch } = useAirFreightShipments(filters);
-  const { data: statsResponse, isLoading: statsLoading } = useAirFreightStats();
-  
-  const shipments: AirFreightShipment[] = shipmentsResponse?.data || [];
-  const stats = statsResponse?.data;
+  const { data: shipmentsResponse, isLoading, isError, error, refetch } = useAirFreightShipments(filters)
+  const { data: statsResponse, isLoading: statsLoading } = useAirFreightStats()
+
+  const shipments: AirFreightShipment[] = shipmentsResponse?.data || []
+  const stats = statsResponse?.data
 
   // Update filters when inputs change
   useEffect(() => {
     const timer = setTimeout(() => {
-      setFilters(prev => ({
+      setFilters((prev) => ({
         ...prev,
         status: activeTab,
         search: searchQuery,
         airWaybill: airWaybillFilter,
-      }));
-    }, 300); // Debounce search/filter updates
-
-    return () => clearTimeout(timer);
-  }, [searchQuery, activeTab, airWaybillFilter]);
+      }))
+    }, 300) // Debounce search/filter updates
+    return () => clearTimeout(timer)
+  }, [searchQuery, activeTab, airWaybillFilter])
 
   // Reset filters function
   const resetFilters = () => {
-    setSearchQuery('');
-    setActiveTab('all');
-    setAirWaybillFilter('');
+    setSearchQuery("")
+    setActiveTab("all")
+    setAirWaybillFilter("")
     setFilters({
-      status: 'all',
-      search: '',
-      airWaybill: '',
-    });
-  };
+      status: "all",
+      search: "",
+      airWaybill: "",
+    })
+  }
 
   // Count shipments by status for badges
-  const getStatusCount = (status: ShipmentStatus | 'all') => {
-    if (status === 'all') return shipments.length;
-    return shipments.filter(ship => ship.status === status).length;
-  };
+  const getStatusCount = (status: ShipmentStatus | "all") => {
+    if (status === "all") return shipments.length
+    return shipments.filter((ship) => ship.status === status).length
+  }
 
   // Format date for display
   const formatShipmentDate = (date: string | Date) => {
-    return format(new Date(date), 'MMM dd, yyyy');
-  };
+    return format(new Date(date), "MMM dd, yyyy")
+  }
 
   // Get CSS class based on status
   const getStatusClass = (status: ShipmentStatus) => {
     switch (status) {
       case ShipmentStatus.CREATED:
       case ShipmentStatus.DOCUMENT_RECEIVED:
-        return 'bg-sky-100 text-sky-800';
+      case ShipmentStatus.DOCUMENTS_SENT: // New status
+        return "bg-sky-100 text-sky-800"
       case ShipmentStatus.IN_TRANSIT:
       case ShipmentStatus.CARGO_ARRIVED:
+      case ShipmentStatus.TRANSFERRED_TO_CFS: // New status
       case ShipmentStatus.ENTRY_REGISTERED:
-      case ShipmentStatus.CLEARED:
-        return 'bg-indigo-100 text-indigo-800';
+      case ShipmentStatus.CUSTOM_RELEASED: // Renamed from CLEARED
+      case ShipmentStatus.DELIVERY_ORDER_OBTAINED: // New status
+      case ShipmentStatus.TAXES_PAID: // New status
+      case ShipmentStatus.NIMULE_BORDER_RELEASED: // New status
+        return "bg-indigo-100 text-indigo-800"
       case ShipmentStatus.DELIVERED:
-        return 'bg-teal-100 text-teal-800';
-      case ShipmentStatus.COMPLETED:
-        return 'bg-emerald-100 text-emerald-800';
+        return "bg-teal-100 text-teal-800"
+      case ShipmentStatus.EMPTY_RETURNED: // Renamed from COMPLETED
+        return "bg-emerald-100 text-emerald-800"
       case ShipmentStatus.DOCUMENT_REJECTED:
-        return 'bg-red-100 text-red-800';
+        return "bg-red-100 text-red-800"
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800"
     }
-  };
+  }
 
   // Check if any filters are active
-  const filtersActive = searchQuery !== '' || activeTab !== 'all' || airWaybillFilter !== '';
+  const filtersActive = searchQuery !== "" || activeTab !== "all" || airWaybillFilter !== ""
 
   // Render functions for different components
   const renderStatusBadge = (status: ShipmentStatus) => {
-    const statusMap: Record<ShipmentStatus, { icon: React.ReactNode, label: string }> = {
-      [ShipmentStatus.CREATED]: { icon: <Clock size={14} />, label: 'Created' },
-      [ShipmentStatus.DOCUMENT_RECEIVED]: { icon: <Clock size={14} />, label: 'Docs Received' },
-      [ShipmentStatus.DOCUMENTS_SENT]: { icon: <Clock size={14} />, label: 'Docs Sent' },
-      [ShipmentStatus.IN_TRANSIT]: { icon: <Plane size={14} />, label: 'In Transit' },
-      [ShipmentStatus.CARGO_ARRIVED]: { icon: <Plane size={14} />, label: 'Cargo Arrived' },
-      [ShipmentStatus.ENTRY_REGISTERED]: { icon: <Package size={14} />, label: 'Entry Registered' },
-      [ShipmentStatus.CLEARED]: { icon: <CheckCircle2 size={14} />, label: 'Cleared' },
-      [ShipmentStatus.DELIVERED]: { icon: <CheckCircle2 size={14} />, label: 'Delivered' },
-      [ShipmentStatus.COMPLETED]: { icon: <CheckCircle2 size={14} />, label: 'Completed' },
-      [ShipmentStatus.DOCUMENT_REJECTED]: { icon: <XCircle size={14} />, label: 'Doc Rejected' },
-      [ShipmentStatus.DELIVERY_CONFIRMED]: { icon: <CheckCircle2 size={14} />, label: 'Delivery Confirmed' },
-    };
-
-    const statusInfo = statusMap[status] || { icon: <Clock size={14} />, label: status };
-
+    const statusMap: Record<ShipmentStatus, { icon: React.ReactNode; label: string }> = {
+      [ShipmentStatus.CREATED]: { icon: <Clock size={14} />, label: "Created" },
+      [ShipmentStatus.DOCUMENT_RECEIVED]: { icon: <Clock size={14} />, label: "Docs Received" },
+      [ShipmentStatus.DOCUMENTS_SENT]: { icon: <Clock size={14} />, label: "Docs Sent" },
+      [ShipmentStatus.IN_TRANSIT]: { icon: <Plane size={14} />, label: "In Transit" },
+      [ShipmentStatus.CARGO_ARRIVED]: { icon: <Plane size={14} />, label: "Cargo Arrived" },
+      [ShipmentStatus.TRANSFERRED_TO_CFS]: { icon: <Package size={14} />, label: "Transferred to CFS" },
+      [ShipmentStatus.ENTRY_REGISTERED]: { icon: <Package size={14} />, label: "Entry Registered" },
+      [ShipmentStatus.CUSTOM_RELEASED]: { icon: <CheckCircle2 size={14} />, label: "Customs Released" }, // Renamed
+      [ShipmentStatus.DELIVERY_ORDER_OBTAINED]: { icon: <FileText size={14} />, label: "DO Obtained" },
+      [ShipmentStatus.TAXES_PAID]: { icon: <Info size={14} />, label: "Taxes Paid" },
+      [ShipmentStatus.NIMULE_BORDER_RELEASED]: { icon: <CheckCircle2 size={14} />, label: "Nimule Released" },
+      [ShipmentStatus.DELIVERED]: { icon: <CheckCircle2 size={14} />, label: "Delivered" },
+      [ShipmentStatus.EMPTY_RETURNED]: { icon: <CheckCircle2 size={14} />, label: "Empty Returned" }, // Renamed
+      [ShipmentStatus.DOCUMENT_REJECTED]: { icon: <XCircle size={14} />, label: "Doc Rejected" },
+    }
+    const statusInfo = statusMap[status] || { icon: <Clock size={14} />, label: status }
     return (
       <Badge className={`flex items-center gap-1 ${getStatusClass(status)}`}>
         {statusInfo.icon}
         {statusInfo.label}
       </Badge>
-    );
-  };
+    )
+  }
 
   const renderDocumentStatusBadge = (shipment: AirFreightShipment) => {
-    const docStatus = getDocumentStatus(shipment);
-    
+    const docStatus = getDocumentStatus(shipment)
+
     const badgeClasses: Record<string, string> = {
-      'missing': 'bg-gray-100 text-gray-800',
-      'rejected': 'bg-red-100 text-red-800',
-      'pending': 'bg-yellow-100 text-yellow-800',
-      'verified': 'bg-teal-100 text-teal-800',
-    };
-    
+      missing: "bg-gray-100 text-gray-800",
+      rejected: "bg-red-100 text-red-800",
+      pending: "bg-yellow-100 text-yellow-800",
+      verified: "bg-teal-100 text-teal-800",
+    }
+
     const icons: Record<string, React.ReactNode> = {
-      'missing': <AlertCircle size={14} />,
-      'rejected': <XCircle size={14} />,
-      'pending': <Clock size={14} />,
-      'verified': <CheckCircle size={14} />,
-    };
-    
-    const status = docStatus.status as keyof typeof badgeClasses;
-    
+      missing: <AlertCircle size={14} />,
+      rejected: <XCircle size={14} />,
+      pending: <Clock size={14} />,
+      verified: <CheckCircle2 size={14} />, // Changed from CheckCircle to CheckCircle2 for consistency
+    }
+
+    const status = docStatus.status as keyof typeof badgeClasses
+
     return (
       <Badge className={`flex items-center gap-1 ${badgeClasses[status]}`}>
         {icons[status]}
         {docStatus.label}
       </Badge>
-    );
-  };
+    )
+  }
 
   const renderStats = () => {
     if (statsLoading) {
@@ -182,25 +183,23 @@ export default function AirFreightPage() {
             </Card>
           ))}
         </div>
-      );
+      )
     }
-
-    if (!stats) return null;
-
+    if (!stats) return null
     return (
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <Card className="p-4 border-l-4 border-l-sky-600 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-500">Total Shipments</p>
-              <h3 className="text-2xl font-bold text-gray-900">{getStatusCount('all')}</h3>
+              <h3 className="text-2xl font-bold text-gray-900">{getStatusCount("all")}</h3>
             </div>
             <div className="bg-sky-100 p-3 rounded-full">
               <BarChart3 className="h-6 w-6 text-sky-600" />
             </div>
           </div>
         </Card>
-        
+
         <Card className="p-4 border-l-4 border-l-indigo-500 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
@@ -212,7 +211,7 @@ export default function AirFreightPage() {
             </div>
           </div>
         </Card>
-        
+
         <Card className="p-4 border-l-4 border-l-teal-500 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
@@ -236,8 +235,8 @@ export default function AirFreightPage() {
           </div>
         </Card>
       </div>
-    );
-  };
+    )
+  }
 
   const renderShipmentCards = () => {
     if (isLoading) {
@@ -262,9 +261,8 @@ export default function AirFreightPage() {
             </Card>
           ))}
         </>
-      );
+      )
     }
-
     if (isError) {
       return (
         <Card className="p-6 flex flex-col items-center text-center">
@@ -273,19 +271,15 @@ export default function AirFreightPage() {
           </div>
           <h3 className="text-xl font-bold text-gray-900 mb-2">Error Loading Shipments</h3>
           <p className="text-gray-600 mb-4">
-            {error instanceof Error ? error.message : 'Failed to load shipments data. Please try again.'}
+            {error instanceof Error ? error.message : "Failed to load shipments data. Please try again."}
           </p>
-          <Button 
-            onClick={() => refetch()} 
-            className="flex items-center gap-2 bg-sky-600"
-          >
+          <Button onClick={() => refetch()} className="flex items-center gap-2 bg-sky-600">
             <RefreshCw size={16} />
             Retry
           </Button>
         </Card>
-      );
+      )
     }
-
     if (shipments.length === 0) {
       return (
         <Card className="p-8 flex flex-col items-center text-center">
@@ -294,16 +288,12 @@ export default function AirFreightPage() {
           </div>
           <h3 className="text-xl font-bold text-gray-900 mb-2">No Shipments Found</h3>
           <p className="text-gray-600 mb-6 max-w-md">
-            {filtersActive 
-              ? 'No shipments match your current filters. Try adjusting your search criteria.'
-              : 'There are no air freight shipments in the system yet.'}
+            {filtersActive
+              ? "No shipments match your current filters. Try adjusting your search criteria."
+              : "There are no air freight shipments in the system yet."}
           </p>
           {filtersActive ? (
-            <Button 
-              onClick={resetFilters}
-              variant="outline"
-              className="flex items-center gap-2"
-            >
+            <Button onClick={resetFilters} variant="outline" className="flex items-center gap-2 bg-transparent">
               <RefreshCw size={16} />
               Reset Filters
             </Button>
@@ -316,9 +306,8 @@ export default function AirFreightPage() {
             </Link>
           )}
         </Card>
-      );
+      )
     }
-
     return (
       <>
         {shipments.map((shipment: AirFreightShipment) => (
@@ -350,22 +339,16 @@ export default function AirFreightPage() {
                       {shipment.Customer?.company && ` - ${shipment.Customer.company}`}
                     </p>
                   </div>
-                  <div>
-                    {renderStatusBadge(shipment.status)}
-                  </div>
+                  <div>{renderStatusBadge(shipment.status)}</div>
                 </div>
-                
+
                 {/* Route */}
                 <div className="flex items-center gap-2 text-sm text-gray-600 my-1">
-                  <div className="px-3 py-1 bg-gray-100 rounded-md">
-                    {shipment.origin}
-                  </div>
+                  <div className="px-3 py-1 bg-gray-100 rounded-md">{shipment.origin}</div>
                   <ArrowRight size={16} className="text-gray-400" />
-                  <div className="px-3 py-1 bg-gray-100 rounded-md">
-                    {shipment.destination}
-                  </div>
+                  <div className="px-3 py-1 bg-gray-100 rounded-md">{shipment.destination}</div>
                 </div>
-                
+
                 {/* Info Row - Dates & Status badges */}
                 <div className="flex flex-wrap items-center justify-between gap-2 mt-1">
                   <div className="flex items-center gap-3">
@@ -373,7 +356,7 @@ export default function AirFreightPage() {
                       <Calendar size={16} className="mr-1 text-gray-500" />
                       <span>Arrival: {formatShipmentDate(shipment.arrivalDate)}</span>
                     </div>
-                    
+
                     {shipment.TrackingEvent && shipment.TrackingEvent.length > 0 && (
                       <div className="flex items-center text-sm text-gray-600">
                         <Clock size={16} className="mr-1 text-gray-500" />
@@ -381,10 +364,14 @@ export default function AirFreightPage() {
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="flex gap-2 items-center">
                     {renderDocumentStatusBadge(shipment)}
-                    <Button variant="outline" size="sm" className="h-8 gap-1 text-xs flex items-center group">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 gap-1 text-xs flex items-center group bg-transparent"
+                    >
                       <FileText size={14} />
                       <span>View Details</span>
                       <ArrowRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity ml-1" />
@@ -396,8 +383,8 @@ export default function AirFreightPage() {
           </Link>
         ))}
       </>
-    );
-  };
+    )
+  }
 
   return (
     <div className="p-4 max-w-7xl mx-auto">
@@ -407,12 +394,7 @@ export default function AirFreightPage() {
           <h1 className="text-2xl font-bold text-gray-900">Air Freight Shipments</h1>
         </div>
         <div className="flex gap-2">
-          <Button 
-            onClick={() => refetch()} 
-            variant="outline" 
-            size="sm" 
-            className="flex items-center gap-1 h-10"
-          >
+          <Button onClick={() => refetch()} variant="outline" size="sm" className="flex items-center gap-1 h-10">
             <RefreshCw size={16} />
             Refresh
           </Button>
@@ -429,12 +411,12 @@ export default function AirFreightPage() {
       {renderStats()}
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ShipmentStatus | 'all')} className="mb-6">
-        <TabsList className="grid grid-cols-5 md:grid-cols-5 lg:grid-cols-6 w-full max-w-4xl">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ShipmentStatus | "all")} className="mb-6">
+        <TabsList className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-7 w-full max-w-4xl">
           <TabsTrigger value="all" className="flex items-center justify-center">
             All
             <Badge variant="secondary" className="ml-2 bg-gray-100 text-gray-700">
-              {getStatusCount('all')}
+              {getStatusCount("all")}
             </Badge>
           </TabsTrigger>
           <TabsTrigger value={ShipmentStatus.IN_TRANSIT} className="flex items-center justify-center">
@@ -449,16 +431,22 @@ export default function AirFreightPage() {
               {getStatusCount(ShipmentStatus.CARGO_ARRIVED)}
             </Badge>
           </TabsTrigger>
-          <TabsTrigger value={ShipmentStatus.CLEARED} className="flex items-center justify-center">
-            Cleared
+          <TabsTrigger value={ShipmentStatus.CUSTOM_RELEASED} className="flex items-center justify-center">
+            Customs Released
             <Badge variant="secondary" className="ml-2 bg-teal-100 text-teal-700">
-              {getStatusCount(ShipmentStatus.CLEARED)}
+              {getStatusCount(ShipmentStatus.CUSTOM_RELEASED)}
             </Badge>
           </TabsTrigger>
           <TabsTrigger value={ShipmentStatus.DELIVERED} className="flex items-center justify-center">
             Delivered
             <Badge variant="secondary" className="ml-2 bg-teal-100 text-teal-700">
               {getStatusCount(ShipmentStatus.DELIVERED)}
+            </Badge>
+          </TabsTrigger>
+          <TabsTrigger value={ShipmentStatus.EMPTY_RETURNED} className="flex items-center justify-center">
+            Returned
+            <Badge variant="secondary" className="ml-2 bg-emerald-100 text-emerald-700">
+              {getStatusCount(ShipmentStatus.EMPTY_RETURNED)}
             </Badge>
           </TabsTrigger>
           <TabsTrigger value={ShipmentStatus.DOCUMENT_REJECTED} className="hidden md:flex items-center justify-center">
@@ -485,7 +473,7 @@ export default function AirFreightPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          
+
           <div className="flex gap-2">
             <div className="w-44">
               <div className="relative">
@@ -501,13 +489,13 @@ export default function AirFreightPage() {
                 />
               </div>
             </div>
-            
+
             {filtersActive && (
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={resetFilters}
-                className="flex items-center gap-1 h-10"
+                className="flex items-center gap-1 h-10 bg-transparent"
               >
                 <RefreshCw size={14} />
                 Reset Filters
@@ -516,9 +504,9 @@ export default function AirFreightPage() {
           </div>
         </div>
       </Card>
-      
+
       {/* Shipment Cards */}
       {renderShipmentCards()}
     </div>
-  );
+  )
 }

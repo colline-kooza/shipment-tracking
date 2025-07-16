@@ -19,7 +19,8 @@ export type DocumentType =
   | "CERTIFICATE_OF_CONFORMITY"
   | "TAX_EXEMPTION"
   | "CERTIFICATE_OF_ORIGIN"
-  | "CMR_WAYBILL";
+  | "CMR_WAYBILL"
+  | "LETTER_OF_AUTHORIZATION"
 
 interface DocumentTypeSelectorProps {
   value: DocumentType | "";
@@ -38,6 +39,7 @@ export const documentLabels: Record<DocumentType, string> = {
   TAX_EXEMPTION: "Tax Exemption",
   CERTIFICATE_OF_ORIGIN: "Certificate of Origin",
   CMR_WAYBILL: "CMR Waybill",
+  LETTER_OF_AUTHORIZATION: "LETTER OF AUTHORIZATION",
 };
 
 export const documentDescriptions: Record<DocumentType, string> = {
@@ -50,6 +52,7 @@ export const documentDescriptions: Record<DocumentType, string> = {
   TAX_EXEMPTION: "Documentation for tax-exempt status",
   CERTIFICATE_OF_ORIGIN: "Document certifying where goods were manufactured",
   CMR_WAYBILL: "Contract for international road transport",
+  LETTER_OF_AUTHORIZATION: "This is a deal of letter of authorization",
 };
 
 export const getRequiredDocumentTypes = (
@@ -62,6 +65,7 @@ export const getRequiredDocumentTypes = (
     "CERTIFICATE_OF_CONFORMITY",
     "TAX_EXEMPTION",
     "CERTIFICATE_OF_ORIGIN",
+    "LETTER_OF_AUTHORIZATION"
   ];
 
   switch (shipmentType) {

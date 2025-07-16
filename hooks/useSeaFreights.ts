@@ -8,13 +8,17 @@ import {
 import { toast } from "sonner";
 
 import { ShipmentStatus } from "@prisma/client";
-import { getSeaFreightShipments, getSeaFreightStats, SeaFreightFilter } from "@/actions/sea-freights";
+import {
+  getSeaFreightShipments,
+  getSeaFreightStats,
+  SeaFreightFilter,
+} from "@/actions/sea-freights";
 
 // Query keys for caching
 export const seaFreightKeys = {
   all: ["seaFreight"] as const,
   lists: () => [...seaFreightKeys.all, "list"] as const,
-  list: (filters: SeaFreightFilter | undefined) => 
+  list: (filters: SeaFreightFilter | undefined) =>
     [...seaFreightKeys.lists(), { filters }] as const,
   stats: () => [...seaFreightKeys.all, "stats"] as const,
 };
@@ -66,20 +70,40 @@ export function getStatusCounts(shipments: any[] | undefined) {
       pending: 0,
       transit: 0,
       delivered: 0,
-      completed: 0,
+      emptyReturned: 0, // Renamed from 'completed'
+      documentRejected: 0, // Added for the new status
     };
   }
 
   return {
     total: shipments.length,
-    pending: shipments.filter(s => 
-      [ShipmentStatus.CREATED, ShipmentStatus.DOCUMENT_RECEIVED].includes(s.status)
+    pending: shipments.filter((s) =>
+      [
+        ShipmentStatus.CREATED,
+        ShipmentStatus.DOCUMENT_RECEIVED,
+        ShipmentStatus.DOCUMENTS_SENT,
+      ].includes(s.status)
     ).length,
-    transit: shipments.filter(s => 
-      [ShipmentStatus.IN_TRANSIT, ShipmentStatus.CARGO_ARRIVED, ShipmentStatus.ENTRY_REGISTERED, ShipmentStatus.CLEARED].includes(s.status)
+    transit: shipments.filter((s) =>
+      [
+        ShipmentStatus.IN_TRANSIT,
+        ShipmentStatus.CARGO_ARRIVED,
+        ShipmentStatus.TRANSFERRED_TO_CFS,
+        ShipmentStatus.ENTRY_REGISTERED,
+        ShipmentStatus.CUSTOM_RELEASED,
+        ShipmentStatus.DELIVERY_ORDER_OBTAINED,
+        ShipmentStatus.TAXES_PAID,
+        ShipmentStatus.NIMULE_BORDER_RELEASED,
+      ].includes(s.status)
     ).length,
-    delivered: shipments.filter(s => s.status === ShipmentStatus.DELIVERED).length,
-    completed: shipments.filter(s => s.status === ShipmentStatus.COMPLETED).length,
+    delivered: shipments.filter((s) => s.status === ShipmentStatus.DELIVERED)
+      .length,
+    emptyReturned: shipments.filter(
+      (s) => s.status === ShipmentStatus.EMPTY_RETURNED
+    ).length, // Updated status
+    documentRejected: shipments.filter(
+      (s) => s.status === ShipmentStatus.DOCUMENT_REJECTED
+    ).length, // New status
   };
 }
 
@@ -87,10 +111,10 @@ export function getStatusCounts(shipments: any[] | undefined) {
  * Format date for display
  */
 export function formatDate(date: string | Date) {
-  return new Date(date).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
+  return new Date(date).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
   });
 }
 
@@ -99,18 +123,22 @@ export function formatDate(date: string | Date) {
  */
 export function getDocumentStatus(shipment: any) {
   if (!shipment.documents || shipment.documents.length === 0) {
-    return { status: 'missing', label: 'No Documents' };
+    return { status: "missing", label: "No Documents" };
   }
-  
-  const hasRejectedDocs = shipment.documents.some((doc: any) => doc.status === 'REJECTED');
+
+  const hasRejectedDocs = shipment.documents.some(
+    (doc: any) => doc.status === "REJECTED"
+  );
   if (hasRejectedDocs) {
-    return { status: 'rejected', label: 'Documents Rejected' };
+    return { status: "rejected", label: "Documents Rejected" };
   }
-  
-  const hasPendingDocs = shipment.documents.some((doc: any) => doc.status === 'PENDING');
+
+  const hasPendingDocs = shipment.documents.some(
+    (doc: any) => doc.status === "PENDING"
+  );
   if (hasPendingDocs) {
-    return { status: 'pending', label: 'Documents Pending' };
+    return { status: "pending", label: "Documents Pending" };
   }
-  
-  return { status: 'verified', label: 'Documents Verified' };
+
+  return { status: "verified", label: "Documents Verified" };
 }

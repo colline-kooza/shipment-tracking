@@ -28,7 +28,7 @@ export async function checkAndNotifyDelayedShipments(): Promise<NotificationResu
           lt: currentDate,
         },
         status: {
-          notIn: [ShipmentStatus.DELIVERED, ShipmentStatus.COMPLETED],
+          notIn: [ShipmentStatus.DELIVERED, ShipmentStatus.EMPTY_RETURNED],
         },
       },
       include: {
@@ -49,7 +49,8 @@ export async function checkAndNotifyDelayedShipments(): Promise<NotificationResu
 
     for (const shipment of delayedShipments) {
       const daysDelayed = Math.ceil(
-        (currentDate.getTime() - new Date(shipment.arrivalDate).getTime()) /
+        (currentDate.getTime() -
+          new Date(shipment.arrivalDate ?? new Date()).getTime()) /
           (1000 * 60 * 60 * 24)
       );
 
@@ -114,7 +115,9 @@ export async function checkAndNotifyDelayedShipments(): Promise<NotificationResu
 
     // Send all delay notifications
     const emailResults = await Promise.allSettled(
-      notifications.map((notification) => sendDelayNotification(notification))
+      notifications.map((notification) =>
+        sendDelayNotification(notification as any)
+      )
     );
 
     const successful = emailResults.filter(

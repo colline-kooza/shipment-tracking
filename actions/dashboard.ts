@@ -23,12 +23,12 @@ export type ShipmentListItem = {
   reference: string;
   trackingNumber: string;
   type: ShipmentType;
-  client: string;
+  consignee: string;
   origin: string;
   destination: string;
   status: ShipmentStatus;
-  container: string | null;  // Removed undefined to fix type issue
-  truck: string | null;      // Removed undefined to fix type issue
+  container: string | null; // Removed undefined to fix type issue
+  truck: string | null; // Removed undefined to fix type issue
   arrivalDate: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -38,10 +38,12 @@ export type ShipmentListItem = {
 /**
  * Fetch dashboard statistics
  */
-export async function getDashboardStats(): Promise<ApiResponse<DashboardStats>> {
+export async function getDashboardStats(): Promise<
+  ApiResponse<DashboardStats>
+> {
   try {
     const user = await getAuthUser();
-    
+
     if (!user?.id) {
       return {
         success: false,
@@ -56,7 +58,7 @@ export async function getDashboardStats(): Promise<ApiResponse<DashboardStats>> 
     const activeShipments = await db.shipment.count({
       where: {
         // ...whereCondition,
-        status: { not: ShipmentStatus.COMPLETED },
+        status: { not: ShipmentStatus.EMPTY_RETURNED },
       },
     });
 
@@ -81,7 +83,7 @@ export async function getDashboardStats(): Promise<ApiResponse<DashboardStats>> 
       where: {
         status: DocumentStatus.PENDING,
         shipment: {
-        //   ...whereCondition,
+          //   ...whereCondition,
         },
       },
     });
@@ -108,10 +110,12 @@ export async function getDashboardStats(): Promise<ApiResponse<DashboardStats>> 
  * Get recent shipments for dashboard
  * @param limit Number of shipments to return
  */
-export async function getRecentShipments(limit: number = 4): Promise<ApiResponse<ShipmentListItem[]>> {
+export async function getRecentShipments(
+  limit: number = 4
+): Promise<ApiResponse<ShipmentListItem[]>> {
   try {
     const user = await getAuthUser();
-    
+
     if (!user?.id) {
       return {
         success: false,
@@ -123,12 +127,12 @@ export async function getRecentShipments(limit: number = 4): Promise<ApiResponse
     // const whereCondition = { createdBy: user.id };
 
     const shipments = await db.shipment.findMany({
-    //   where: whereCondition,
+      //   where: whereCondition,
       select: {
         id: true,
         reference: true,
         type: true,
-        client: true,
+        consignee: true,
         origin: true,
         destination: true,
         status: true,
@@ -138,21 +142,21 @@ export async function getRecentShipments(limit: number = 4): Promise<ApiResponse
         createdAt: true,
         updatedAt: true,
         invoiceStatus: true,
-        trackingNumber:true
+        trackingNumber: true,
       },
       orderBy: {
-        createdAt: 'desc',
+        createdAt: "desc",
       },
       take: limit,
     });
 
     return {
       success: true,
-      data: shipments.map(shipment => ({
+      data: shipments.map((shipment) => ({
         ...shipment,
         // Ensure container and truck are never undefined
         container: shipment.container || null,
-        truck: shipment.truck || null
+        truck: shipment.truck || null,
       })) as ShipmentListItem[],
     };
   } catch (error) {
@@ -167,10 +171,12 @@ export async function getRecentShipments(limit: number = 4): Promise<ApiResponse
 /**
  * Get unread notifications count for dashboard
  */
-export async function getUnreadNotificationsCount(): Promise<ApiResponse<number>> {
+export async function getUnreadNotificationsCount(): Promise<
+  ApiResponse<number>
+> {
   try {
     const user = await getAuthUser();
-    
+
     if (!user?.id) {
       return {
         success: false,
@@ -193,7 +199,8 @@ export async function getUnreadNotificationsCount(): Promise<ApiResponse<number>
     console.error("Failed to fetch unread notifications count:", error);
     return {
       success: false,
-      error: "Failed to fetch unread notifications: " + (error as Error).message,
+      error:
+        "Failed to fetch unread notifications: " + (error as Error).message,
     };
   }
 }

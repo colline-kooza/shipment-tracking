@@ -3,18 +3,26 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ShipmentStatus } from "@prisma/client";
-import { createTrackingEvent, getShipment, getShipmentByReference, getShipments, ShipmentFilter, TrackingEventInput } from "@/actions/trackings";
-
+import {
+  createTrackingEvent,
+  getShipment,
+  getShipmentByReference,
+  getShipments,
+  ShipmentFilter,
+  TrackingEventInput,
+} from "@/actions/trackings";
 
 // React Query keys
 export const shipmentKeys = {
   all: ["shipments"] as const,
   lists: () => [...shipmentKeys.all, "list"] as const,
-  filtered: (filters: ShipmentFilter) => [...shipmentKeys.lists(), filters] as const,
+  filtered: (filters: ShipmentFilter) =>
+    [...shipmentKeys.lists(), filters] as const,
   details: () => [...shipmentKeys.all, "detail"] as const,
   detail: (id: string) => [...shipmentKeys.details(), id] as const,
   tracking: () => [...shipmentKeys.all, "tracking"] as const,
-  trackByRef: (reference: string) => [...shipmentKeys.tracking(), reference] as const,
+  trackByRef: (reference: string) =>
+    [...shipmentKeys.tracking(), reference] as const,
 };
 
 /**
@@ -80,21 +88,25 @@ export function useCreateTrackingEvent() {
     mutationFn: (data: TrackingEventInput) => createTrackingEvent(data),
     onSuccess: (response, variables) => {
       if (response.success) {
-        const statusText = variables.status.replace(/_/g, ' ').toLowerCase();
-        
+        const statusText = variables.status.replace(/_/g, " ").toLowerCase();
+
         toast.success(`Tracking updated`, {
           description: `Shipment status changed to ${statusText}`,
         });
-        
+
         // Invalidate queries to refresh data
-        queryClient.invalidateQueries({ queryKey: shipmentKeys.detail(variables.shipmentId) });
+        queryClient.invalidateQueries({
+          queryKey: shipmentKeys.detail(variables.shipmentId),
+        });
         queryClient.invalidateQueries({ queryKey: shipmentKeys.lists() });
-        
+
         // If this was a public tracking update, invalidate that too
-        const shipment = queryClient.getQueryData(shipmentKeys.detail(variables.shipmentId));
+        const shipment = queryClient.getQueryData(
+          shipmentKeys.detail(variables.shipmentId)
+        );
         if (shipment && (shipment as any).reference) {
-          queryClient.invalidateQueries({ 
-            queryKey: shipmentKeys.trackByRef((shipment as any).reference) 
+          queryClient.invalidateQueries({
+            queryKey: shipmentKeys.trackByRef((shipment as any).reference),
           });
         }
       } else {
@@ -113,46 +125,51 @@ export function useCreateTrackingEvent() {
 
 // Helper function to get status label
 export function getStatusLabel(status: ShipmentStatus): string {
-  return status.replace(/_/g, ' ')
-    .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ');
+  return status
+    .replace(/_/g, " ")
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
 }
 
 // Helper function to get status color
 export function getStatusColor(status: ShipmentStatus): string {
   const statusMap: Record<ShipmentStatus, string> = {
-    CREATED: "bg-red-500",
-    DOCUMENT_RECEIVED: "bg-blue-500",
-    DOCUMENTS_SENT: "bg-indigo-500",
-    CARGO_ARRIVED: "bg-purple-500",
-    DELIVERY_CONFIRMED: "bg-teal-500",
-    ENTRY_REGISTERED: "bg-cyan-500",
-    CLEARED: "bg-green-500",
-    IN_TRANSIT: "bg-amber-500",
-    DELIVERED: "bg-emerald-500",
-    COMPLETED: "bg-green-600",
-    DOCUMENT_REJECTED: "bg-red-500"
+    [ShipmentStatus.CREATED]: "bg-gray-500", // Neutral for initial state
+    [ShipmentStatus.DOCUMENT_RECEIVED]: "bg-blue-500",
+    [ShipmentStatus.DOCUMENTS_SENT]: "bg-indigo-500",
+    [ShipmentStatus.IN_TRANSIT]: "bg-amber-500",
+    [ShipmentStatus.CARGO_ARRIVED]: "bg-purple-500",
+    [ShipmentStatus.TRANSFERRED_TO_CFS]: "bg-cyan-500",
+    [ShipmentStatus.ENTRY_REGISTERED]: "bg-teal-500",
+    [ShipmentStatus.CUSTOM_RELEASED]: "bg-green-500",
+    [ShipmentStatus.DELIVERY_ORDER_OBTAINED]: "bg-lime-500",
+    [ShipmentStatus.TAXES_PAID]: "bg-orange-500",
+    [ShipmentStatus.NIMULE_BORDER_RELEASED]: "bg-emerald-500",
+    [ShipmentStatus.DELIVERED]: "bg-green-600",
+    [ShipmentStatus.EMPTY_RETURNED]: "bg-green-700", // Darker green for final completion
+    [ShipmentStatus.DOCUMENT_REJECTED]: "bg-red-500",
   };
-
   return statusMap[status] || "bg-gray-500";
 }
 
 // Helper function to get status badge color
 export function getStatusBadgeColor(status: ShipmentStatus): string {
   const statusMap: Record<ShipmentStatus, string> = {
-    CREATED: "bg-gray-100 text-gray-800",
-    DOCUMENT_RECEIVED: "bg-blue-100 text-blue-800",
-    DOCUMENTS_SENT: "bg-indigo-100 text-indigo-800",
-    CARGO_ARRIVED: "bg-purple-100 text-purple-800",
-    DELIVERY_CONFIRMED: "bg-teal-100 text-teal-800",
-    ENTRY_REGISTERED: "bg-cyan-100 text-cyan-800",
-    CLEARED: "bg-green-100 text-green-800",
-    IN_TRANSIT: "bg-amber-100 text-amber-800",
-    DELIVERED: "bg-emerald-100 text-emerald-800",
-    COMPLETED: "bg-green-100 text-green-800",
-    DOCUMENT_REJECTED: "bg-red-100 text-red-800"
+    [ShipmentStatus.CREATED]: "bg-gray-100 text-gray-800",
+    [ShipmentStatus.DOCUMENT_RECEIVED]: "bg-blue-100 text-blue-800",
+    [ShipmentStatus.DOCUMENTS_SENT]: "bg-indigo-100 text-indigo-800",
+    [ShipmentStatus.IN_TRANSIT]: "bg-amber-100 text-amber-800",
+    [ShipmentStatus.CARGO_ARRIVED]: "bg-purple-100 text-purple-800",
+    [ShipmentStatus.TRANSFERRED_TO_CFS]: "bg-cyan-100 text-cyan-800",
+    [ShipmentStatus.ENTRY_REGISTERED]: "bg-teal-100 text-teal-800",
+    [ShipmentStatus.CUSTOM_RELEASED]: "bg-green-100 text-green-800",
+    [ShipmentStatus.DELIVERY_ORDER_OBTAINED]: "bg-lime-100 text-lime-800",
+    [ShipmentStatus.TAXES_PAID]: "bg-orange-100 text-orange-800",
+    [ShipmentStatus.NIMULE_BORDER_RELEASED]: "bg-emerald-100 text-emerald-800",
+    [ShipmentStatus.DELIVERED]: "bg-green-200 text-green-900",
+    [ShipmentStatus.EMPTY_RETURNED]: "bg-green-300 text-green-900", // Darker badge for final completion
+    [ShipmentStatus.DOCUMENT_REJECTED]: "bg-red-100 text-red-800",
   };
-
   return statusMap[status] || "bg-gray-100 text-gray-800";
 }

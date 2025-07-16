@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { useState, useEffect } from "react"
-import Link from "next/link"
+import type React from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   Package,
   Truck,
@@ -15,66 +15,74 @@ import {
   Container,
   Info,
   Users,
-} from "lucide-react"
-import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { useRouter } from "next/navigation"
-import { toast } from "sonner"
-import { CalendarIcon } from "lucide-react"
-import { format } from "date-fns"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar } from "@/components/ui/calendar"
-import { cn } from "@/lib/utils"
-import DocumentUploader, { type DocumentUpload } from "@/components/docs/DocumentUploader"
-import { getRequiredDocumentTypes } from "@/components/docs/DocumentTypeSelector"
-import { useCreateShipment } from "@/hooks/useShipmentQueries2"
-import { CustomerSelect } from "@/components/dashboard/customers/CustomerSelect"
+} from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import DocumentUploader, {
+  type DocumentUpload,
+} from "@/components/docs/DocumentUploader";
+import { getRequiredDocumentTypes } from "@/components/docs/DocumentTypeSelector";
+import { useCreateShipment } from "@/hooks/useShipmentQueries2";
+import { CustomerSelect } from "@/components/dashboard/customers/CustomerSelect";
 
 // Define TypeScript types
-export type ShipmentType = "SEA" | "AIR" | "ROAD"
-export type Step = "type" | "details" | "documents" | "review"
+export type ShipmentType = "SEA" | "AIR" | "ROAD";
+export type Step = "type" | "details" | "documents" | "review";
 
 interface Customer {
-  id: string
-  name: string
-  company: string | null
-  consignee: string | null
-  email: string | null
-  phone: string | null
+  id: string;
+  name: string;
+  company: string | null;
+  consignee: string | null;
+  email: string | null;
+  phone: string | null;
 }
 
 interface FormData {
-  type: ShipmentType
-  customerId: string
-  customer: Customer | null
-  consignee: string
-  reference: string
-  trackingNumber: string
-  origin: string
-  destination: string
-  arrivalDate: string
-  container: string
-  truck: string
-  documents: DocumentUpload[]
+  type: ShipmentType;
+  customerId: string;
+  customer: Customer | null;
+  consignee: string;
+  reference: string;
+  trackingNumber: string;
+  origin: string;
+  destination: string;
+  arrivalDate: string;
+  airwayBillNumber?: string;
+  container: string;
+  truck: string;
+  documents: DocumentUpload[];
 }
 
 interface StepInfo {
-  id: Step
-  label: string
-  icon: React.ReactNode
+  id: Step;
+  label: string;
+  icon: React.ReactNode;
 }
 
 const NewShipment: React.FC = () => {
-  const router = useRouter()
-  const [currentStep, setCurrentStep] = useState<Step>("type")
+  const router = useRouter();
+  const [currentStep, setCurrentStep] = useState<Step>("type");
   const [formData, setFormData] = useState<FormData>({
     type: "SEA",
     customerId: "",
     customer: null,
     consignee: "",
     reference: "",
+    airwayBillNumber: "",
     trackingNumber: "",
     origin: "",
     destination: "",
@@ -82,240 +90,254 @@ const NewShipment: React.FC = () => {
     container: "",
     truck: "",
     documents: [],
-  })
-  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({})
+  });
+  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>(
+    {}
+  );
 
-  const { mutate: createShipment, isPending } = useCreateShipment()
+  const { mutate: createShipment, isPending } = useCreateShipment();
 
   const steps: StepInfo[] = [
     { id: "type", label: "Shipment Type", icon: <Package size={18} /> },
     { id: "details", label: "Shipment Details", icon: <Info size={18} /> },
-    { id: "documents", label: "Required Documents", icon: <FileText size={18} /> },
+    {
+      id: "documents",
+      label: "Required Documents",
+      icon: <FileText size={18} />,
+    },
     { id: "review", label: "Review & Submit", icon: <Check size={18} /> },
-  ]
+  ];
 
   // Generate tracking number and default reference number when shipment type changes
   useEffect(() => {
-    generateTrackingNumber(formData.type)
-    generateDefaultReferenceNumber(formData.type)
-  }, [formData.type])
+    generateTrackingNumber(formData.type);
+    generateDefaultReferenceNumber(formData.type);
+  }, [formData.type]);
 
   // Generate tracking number based on shipment type
   const generateTrackingNumber = (shipmentType: ShipmentType) => {
-    const date = new Date()
-    const year = date.getFullYear().toString().slice(-2)
-    const month = (date.getMonth() + 1).toString().padStart(2, "0")
-    const day = date.getDate().toString().padStart(2, "0")
+    const date = new Date();
+    const year = date.getFullYear().toString().slice(-2);
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const day = date.getDate().toString().padStart(2, "0");
     const randomNum = Math.floor(Math.random() * 10000)
       .toString()
-      .padStart(4, "0")
+      .padStart(4, "0");
 
-    let prefix = ""
+    let prefix = "";
     switch (shipmentType) {
       case "SEA":
-        prefix = "SEA"
-        break
+        prefix = "SEA";
+        break;
       case "AIR":
-        prefix = "AIR"
-        break
+        prefix = "AIR";
+        break;
       case "ROAD":
-        prefix = "RD"
-        break
+        prefix = "RD";
+        break;
     }
 
-    const trackingNumber = `${prefix}-${year}${month}${day}-${randomNum}`
-    setFormData((prev) => ({ ...prev, trackingNumber }))
-  }
+    const trackingNumber = `${prefix}-${year}${month}${day}-${randomNum}`;
+    setFormData((prev) => ({ ...prev, trackingNumber }));
+  };
 
   // Generate default reference number based on shipment type
   const generateDefaultReferenceNumber = (shipmentType: ShipmentType) => {
-    const date = new Date()
-    const year = date.getFullYear().toString().slice(-2)
-    const month = (date.getMonth() + 1).toString().padStart(2, "0")
-    const day = date.getDate().toString().padStart(2, "0")
-    const randomChars = Math.random().toString(36).substring(2, 5).toUpperCase()
+    const date = new Date();
+    const year = date.getFullYear().toString().slice(-2);
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const day = date.getDate().toString().padStart(2, "0");
+    const randomChars = Math.random()
+      .toString(36)
+      .substring(2, 5)
+      .toUpperCase();
 
-    let prefix = ""
+    let prefix = "";
     switch (shipmentType) {
       case "SEA":
-        prefix = "S"
-        break
+        prefix = "S";
+        break;
       case "AIR":
-        prefix = "A"
-        break
+        prefix = "A";
+        break;
       case "ROAD":
-        prefix = "R"
-        break
+        prefix = "R";
+        break;
     }
 
-    const reference = `REF-${prefix}${year}${month}-${randomChars}`
+    const reference = `REF-${prefix}${year}${month}-${randomChars}`;
     // Only set default reference if the user hasn't entered one yet or if they're changing the shipment type
     if (!formData.reference || formData.type !== shipmentType) {
-      setFormData((prev) => ({ ...prev, reference }))
+      setFormData((prev) => ({ ...prev, reference }));
     }
-  }
+  };
 
   // Handle customer selection
-  const handleCustomerSelect = (customerId: string, customer: Customer | null) => {
+  const handleCustomerSelect = (
+    customerId: string,
+    customer: Customer | null
+  ) => {
     setFormData((prev) => ({
       ...prev,
       customerId,
       customer,
       consignee: customer?.consignee || "", // Auto-fill consignee from customer
-    }))
-  }
+    }));
+  };
 
   // Validation function for each step
   const validateStep = (step: Step): boolean => {
-    const newErrors: Partial<Record<keyof FormData, string>> = {}
+    const newErrors: Partial<Record<keyof FormData, string>> = {};
 
     switch (step) {
       case "type":
         if (!formData.type) {
-          newErrors.type = "Shipment type is required"
+          newErrors.type = "Shipment type is required";
         }
-        break
+        break;
 
       case "details":
         if (!formData.customerId) {
-          newErrors.customerId = "Customer selection is required"
+          newErrors.customerId = "Customer selection is required";
         }
         if (!formData.reference.trim()) {
-          newErrors.reference = "Reference number is required"
+          newErrors.reference = "Reference number is required";
         }
         if (formData.type === "ROAD" && !formData.origin.trim()) {
-          newErrors.origin = "Origin is required for road shipments"
+          newErrors.origin = "Origin is required for road shipments";
         }
         if (!formData.destination.trim()) {
-          newErrors.destination = "Destination is required"
+          newErrors.destination = "Destination is required";
         }
         if (!formData.arrivalDate) {
-          newErrors.arrivalDate = "Expected delivery date is required"
+          newErrors.arrivalDate = "Expected delivery date is required";
         } else {
-          const date = new Date(formData.arrivalDate)
+          const date = new Date(formData.arrivalDate);
           if (isNaN(date.getTime())) {
-            newErrors.arrivalDate = "Invalid date format"
+            newErrors.arrivalDate = "Invalid date format";
           }
         }
         if (formData.type === "SEA" && !formData.container.trim()) {
-          newErrors.container = "Container number is required for sea shipments"
+          newErrors.container =
+            "Container number is required for sea shipments";
         }
-        break
+        break;
 
       case "documents":
-        const requiredDocs = getRequiredDocumentTypes(formData.type)
-        const uploadedDocCount = formData.documents.length
+        const uploadedDocCount = formData.documents.length;
         // Require minimum 2 documents instead of all
         if (uploadedDocCount < 2) {
-          newErrors.documents = `Please upload at least 2 documents. Currently uploaded: ${uploadedDocCount}`
+          newErrors.documents = `Please upload at least 2 documents. Currently uploaded: ${uploadedDocCount}`;
         }
-        break
+        break;
 
       case "review":
         // Validate all fields again before submission
         if (!formData.customerId) {
-          newErrors.customerId = "Customer selection is required"
+          newErrors.customerId = "Customer selection is required";
         }
         if (!formData.reference.trim()) {
-          newErrors.reference = "Reference number is required"
+          newErrors.reference = "Reference number is required";
         }
         if (formData.type === "ROAD" && !formData.origin.trim()) {
-          newErrors.origin = "Origin is required for road shipments"
+          newErrors.origin = "Origin is required for road shipments";
         }
         if (!formData.destination.trim()) {
-          newErrors.destination = "Destination is required"
+          newErrors.destination = "Destination is required";
         }
         if (!formData.arrivalDate) {
-          newErrors.arrivalDate = "Expected delivery date is required"
+          newErrors.arrivalDate = "Expected delivery date is required";
         } else {
-          const date = new Date(formData.arrivalDate)
+          const date = new Date(formData.arrivalDate);
           if (isNaN(date.getTime())) {
-            newErrors.arrivalDate = "Invalid date format"
+            newErrors.arrivalDate = "Invalid date format";
           }
         }
         if (formData.type === "SEA" && !formData.container.trim()) {
-          newErrors.container = "Container number is required for sea shipments"
+          newErrors.container =
+            "Container number is required for sea shipments";
         }
-        const requiredDocsReview = getRequiredDocumentTypes(formData.type)
-        const uploadedDocCountReview = formData.documents.length
+        const requiredDocsReview = getRequiredDocumentTypes(formData.type);
+        const uploadedDocCountReview = formData.documents.length;
         if (uploadedDocCountReview < 2) {
-          newErrors.documents = `Please upload at least 2 documents. Currently uploaded: ${uploadedDocCountReview}`
+          newErrors.documents = `Please upload at least 2 documents. Currently uploaded: ${uploadedDocCountReview}`;
         }
-        break
+        break;
     }
 
-    setErrors(newErrors)
+    setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) {
       toast.error("Please fix the following errors:", {
         description: Object.values(newErrors).join("\n"),
-      })
-      return false
+      });
+      return false;
     }
-    return true
-  }
+    return true;
+  };
 
   const handleNext = (): void => {
     if (validateStep(currentStep)) {
-      const stepIndex = steps.findIndex((step) => step.id === currentStep)
+      const stepIndex = steps.findIndex((step) => step.id === currentStep);
       if (stepIndex < steps.length - 1) {
-        setCurrentStep(steps[stepIndex + 1].id)
-        window.scrollTo(0, 0)
+        setCurrentStep(steps[stepIndex + 1].id);
+        window.scrollTo(0, 0);
       }
     }
-  }
+  };
 
   const handleBack = (): void => {
-    const stepIndex = steps.findIndex((step) => step.id === currentStep)
+    const stepIndex = steps.findIndex((step) => step.id === currentStep);
     if (stepIndex > 0) {
-      setCurrentStep(steps[stepIndex - 1].id)
-      setErrors({})
-      window.scrollTo(0, 0)
+      setCurrentStep(steps[stepIndex - 1].id);
+      setErrors({});
+      window.scrollTo(0, 0);
     }
-  }
+  };
 
   const handleDocumentsChange = (documents: DocumentUpload[]) => {
-    setFormData((prev) => ({ ...prev, documents }))
-  }
+    setFormData((prev) => ({ ...prev, documents }));
+  };
 
   const handleSubmit = async (): Promise<void> => {
     if (!validateStep("review")) {
-      return
+      return;
     }
 
-    let originValue = formData.origin
+    let originValue = formData.origin;
     if (formData.type === "SEA") {
-      originValue = "Mombasa Port"
+      originValue = "Mombasa Port";
     } else if (formData.type === "AIR") {
-      originValue = "Juba International Airport"
+      originValue = "Juba International Airport";
     }
 
     const shipmentData = {
       type: formData.type,
-      client:formData.customer?.name,
+      client: formData.customer?.name,
       customerId: formData.customerId,
       consignee: formData.consignee,
       reference: formData.reference,
       trackingNumber: formData.trackingNumber,
       origin: originValue,
+      airwayBillNumber: formData.airwayBillNumber || null,
       destination: formData.destination,
       arrivalDate: new Date(formData.arrivalDate),
       container: formData.type === "SEA" ? formData.container : undefined,
       truck: formData.truck || undefined,
       documents: formData.documents,
-    }
+    };
 
-    console.log(shipmentData.client, "these are shipment data")
+    console.log(shipmentData.client, "these are shipment data");
     createShipment(shipmentData, {
       onSuccess: () => {
-        router.push("/dashboard/shipments-trakit")
+        router.push("/dashboard/shipments-trakit");
       },
       onError: (error: Error) => {
         toast.error("Failed to create shipment", {
           description: error.message || "Unknown error occurred",
-        })
+        });
       },
-    })
-  }
+    });
+  };
 
   const ShipmentTypeOption = ({
     type,
@@ -323,14 +345,16 @@ const NewShipment: React.FC = () => {
     description,
     icon,
   }: {
-    type: ShipmentType
-    label: string
-    description: string
-    icon: React.ReactNode
+    type: ShipmentType;
+    label: string;
+    description: string;
+    icon: React.ReactNode;
   }) => (
     <button
       className={`p-6 border-2 rounded-lg text-left transition-all duration-200 hover:shadow-md ${
-        formData.type === type ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300"
+        formData.type === type
+          ? "border-blue-500 bg-blue-50"
+          : "border-gray-200 hover:border-gray-300"
       }`}
       onClick={() => setFormData({ ...formData, type })}
       type="button"
@@ -349,7 +373,7 @@ const NewShipment: React.FC = () => {
         </div>
       </div>
     </button>
-  )
+  );
 
   const renderStepContent = () => {
     switch (currentStep) {
@@ -358,7 +382,9 @@ const NewShipment: React.FC = () => {
           <div className="space-y-6 p-6">
             <div className="flex items-center border-b pb-4 mb-4">
               <Package className="h-6 w-6 text-blue-600 mr-2" />
-              <h2 className="text-lg font-medium text-gray-900">Select Shipment Type</h2>
+              <h2 className="text-lg font-medium text-gray-900">
+                Select Shipment Type
+              </h2>
             </div>
             {errors.type && (
               <div className="bg-red-50 rounded-md p-3 flex items-start">
@@ -387,14 +413,16 @@ const NewShipment: React.FC = () => {
               />
             </div>
           </div>
-        )
+        );
 
       case "details":
         return (
           <div className="space-y-6 p-6">
             <div className="flex items-center border-b pb-4 mb-4">
               <Info className="h-6 w-6 text-blue-600 mr-2" />
-              <h2 className="text-xl font-medium text-gray-900">Shipment Details</h2>
+              <h2 className="text-xl font-medium text-gray-900">
+                Shipment Details
+              </h2>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
               {/* Customer Selection */}
@@ -406,7 +434,11 @@ const NewShipment: React.FC = () => {
                   placeholder="Select a customer..."
                   className={errors.customerId ? "border-red-500" : ""}
                 />
-                {errors.customerId && <p className="text-red-500 text-xs mt-1">{errors.customerId}</p>}
+                {errors.customerId && (
+                  <p className="text-red-500 text-xs mt-1">
+                    {errors.customerId}
+                  </p>
+                )}
               </div>
 
               {/* Consignee field - auto-filled from customer */}
@@ -419,7 +451,9 @@ const NewShipment: React.FC = () => {
                   <Input
                     id="consignee"
                     value={formData.consignee}
-                    onChange={(e) => setFormData({ ...formData, consignee: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, consignee: e.target.value })
+                    }
                     className="pl-10"
                     placeholder="Enter consignee name"
                   />
@@ -435,16 +469,26 @@ const NewShipment: React.FC = () => {
                   <Input
                     id="reference"
                     value={formData.reference}
-                    onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
-                    className={`pl-10 ${errors.reference ? "border-red-500" : ""}`}
+                    onChange={(e) =>
+                      setFormData({ ...formData, reference: e.target.value })
+                    }
+                    className={`pl-10 ${
+                      errors.reference ? "border-red-500" : ""
+                    }`}
                     placeholder="Enter reference number"
                   />
-                  {errors.reference && <p className="text-red-500 text-xs mt-1">{errors.reference}</p>}
+                  {errors.reference && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {errors.reference}
+                    </p>
+                  )}
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="trackingNumber">Generated Tracking Number</Label>
+                <Label htmlFor="trackingNumber">
+                  Generated Tracking Number
+                </Label>
                 <div className="relative rounded-md shadow-sm">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Package className="h-5 w-5 text-gray-400" />
@@ -457,7 +501,32 @@ const NewShipment: React.FC = () => {
                   />
                 </div>
               </div>
-
+              {/* Add Airway Bill Number field here */}
+              {/* {formData.type === "AIR" && ( */}
+              <div className="space-y-2">
+                <Label htmlFor="airwayBillNumber">
+                  Airway Bill Number{" "}
+                  <span className="text-gray-400 text-xs">(Optional)</span>
+                </Label>
+                <div className="relative rounded-md shadow-sm">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FileText className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <Input
+                    id="airwayBillNumber"
+                    value={formData.airwayBillNumber || ""} // Add fallback to empty string
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        airwayBillNumber: e.target.value,
+                      })
+                    }
+                    className="pl-10"
+                    placeholder="Enter airway bill number (optional)"
+                  />
+                </div>
+              </div>
+              {/* )} */}
               <div className="space-y-2">
                 <Label htmlFor="origin">Origin</Label>
                 <div className="relative rounded-md shadow-sm">
@@ -468,19 +537,29 @@ const NewShipment: React.FC = () => {
                     <Input
                       id="origin"
                       value={formData.origin}
-                      onChange={(e) => setFormData({ ...formData, origin: e.target.value })}
-                      className={`pl-10 ${errors.origin ? "border-red-500" : ""}`}
+                      onChange={(e) =>
+                        setFormData({ ...formData, origin: e.target.value })
+                      }
+                      className={`pl-10 ${
+                        errors.origin ? "border-red-500" : ""
+                      }`}
                       placeholder="Enter origin location"
                     />
                   ) : (
                     <Input
                       id="origin"
-                      value={formData.type === "SEA" ? "Mombasa Port" : "Juba International Airport"}
+                      value={
+                        formData.type === "SEA"
+                          ? "Mombasa Port"
+                          : "Juba International Airport"
+                      }
                       disabled
                       className="bg-gray-50 pl-10"
                     />
                   )}
-                  {errors.origin && <p className="text-red-500 text-xs mt-1">{errors.origin}</p>}
+                  {errors.origin && (
+                    <p className="text-red-500 text-xs mt-1">{errors.origin}</p>
+                  )}
                 </div>
               </div>
 
@@ -493,11 +572,19 @@ const NewShipment: React.FC = () => {
                   <Input
                     id="destination"
                     value={formData.destination}
-                    onChange={(e) => setFormData({ ...formData, destination: e.target.value })}
-                    className={`pl-10 ${errors.destination ? "border-red-500" : ""}`}
+                    onChange={(e) =>
+                      setFormData({ ...formData, destination: e.target.value })
+                    }
+                    className={`pl-10 ${
+                      errors.destination ? "border-red-500" : ""
+                    }`}
                     placeholder="Enter destination"
                   />
-                  {errors.destination && <p className="text-red-500 text-xs mt-1">{errors.destination}</p>}
+                  {errors.destination && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {errors.destination}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -511,25 +598,39 @@ const NewShipment: React.FC = () => {
                         className={cn(
                           "w-full pl-10 text-left font-normal",
                           !formData.arrivalDate && "text-muted-foreground",
-                          errors.arrivalDate && "border-red-500",
+                          errors.arrivalDate && "border-red-500"
                         )}
                       >
                         <CalendarIcon className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-                        {formData.arrivalDate ? format(new Date(formData.arrivalDate), "PPP") : "Pick a date"}
+                        {formData.arrivalDate
+                          ? format(new Date(formData.arrivalDate), "PPP")
+                          : "Pick a date"}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
                         mode="single"
-                        selected={formData.arrivalDate ? new Date(formData.arrivalDate) : undefined}
+                        selected={
+                          formData.arrivalDate
+                            ? new Date(formData.arrivalDate)
+                            : undefined
+                        }
                         onSelect={(date) =>
-                          setFormData({ ...formData, arrivalDate: date?.toISOString().split("T")[0] || "" })
+                          setFormData({
+                            ...formData,
+                            arrivalDate:
+                              date?.toISOString().split("T")[0] || "",
+                          })
                         }
                         initialFocus
                       />
                     </PopoverContent>
                   </Popover>
-                  {errors.arrivalDate && <p className="text-red-500 text-xs mt-1">{errors.arrivalDate}</p>}
+                  {errors.arrivalDate && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {errors.arrivalDate}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -543,18 +644,27 @@ const NewShipment: React.FC = () => {
                     <Input
                       id="container"
                       value={formData.container}
-                      onChange={(e) => setFormData({ ...formData, container: e.target.value })}
-                      className={`pl-10 ${errors.container ? "border-red-500" : ""}`}
+                      onChange={(e) =>
+                        setFormData({ ...formData, container: e.target.value })
+                      }
+                      className={`pl-10 ${
+                        errors.container ? "border-red-500" : ""
+                      }`}
                       placeholder="Enter container number"
                     />
-                    {errors.container && <p className="text-red-500 text-xs mt-1">{errors.container}</p>}
+                    {errors.container && (
+                      <p className="text-red-500 text-xs mt-1">
+                        {errors.container}
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
 
               <div className="space-y-2">
                 <Label htmlFor="truck">
-                  Truck Number <span className="text-gray-400 text-xs">(Optional)</span>
+                  Truck Number{" "}
+                  <span className="text-gray-400 text-xs">(Optional)</span>
                 </Label>
                 <div className="relative rounded-md shadow-sm">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -563,7 +673,9 @@ const NewShipment: React.FC = () => {
                   <Input
                     id="truck"
                     value={formData.truck}
-                    onChange={(e) => setFormData({ ...formData, truck: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, truck: e.target.value })
+                    }
                     className="pl-10"
                     placeholder="Enter truck number (optional)"
                   />
@@ -571,14 +683,16 @@ const NewShipment: React.FC = () => {
               </div>
             </div>
           </div>
-        )
+        );
 
       case "documents":
         return (
           <div className="space-y-6 p-6">
             <div className="flex items-center border-b pb-4 mb-4">
               <FileText className="h-6 w-6 text-blue-600 mr-2" />
-              <h2 className="text-xl font-medium text-gray-900">Required Documents</h2>
+              <h2 className="text-xl font-medium text-gray-900">
+                Required Documents
+              </h2>
             </div>
             {errors.documents && (
               <div className="bg-red-50 rounded-md p-3 flex items-start">
@@ -589,7 +703,8 @@ const NewShipment: React.FC = () => {
             <div className="bg-blue-50 rounded-lg p-4 mb-6 flex items-start">
               <Info className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
               <p className="ml-3 text-sm text-blue-700">
-                Please upload the following required documents for your {formData.type.toLowerCase()} freight shipment.
+                Please upload the following required documents for your{" "}
+                {formData.type.toLowerCase()} freight shipment.
               </p>
             </div>
             <DocumentUploader
@@ -599,14 +714,16 @@ const NewShipment: React.FC = () => {
               maxDocuments={10}
             />
           </div>
-        )
+        );
 
       case "review":
         return (
           <div className="space-y-6 p-6">
             <div className="flex items-center border-b pb-4 mb-4">
               <Check className="h-6 w-6 text-blue-600 mr-2" />
-              <h2 className="text-xl font-medium text-gray-900">Review Shipment Details</h2>
+              <h2 className="text-xl font-medium text-gray-900">
+                Review Shipment Details
+              </h2>
             </div>
             {Object.keys(errors).length > 0 && (
               <div className="bg-red-50 rounded-md p-3 flex items-start">
@@ -643,22 +760,27 @@ const NewShipment: React.FC = () => {
                         {formData.type === "SEA"
                           ? "Sea Freight"
                           : formData.type === "AIR"
-                            ? "Air Freight"
-                            : "Road Freight"}
+                          ? "Air Freight"
+                          : "Road Freight"}
                       </p>
                       <p className="text-sm text-gray-500 mt-1">
-                        <span className="font-medium">Reference:</span> {formData.reference || "Not provided"}
+                        <span className="font-medium">Reference:</span>{" "}
+                        {formData.reference || "Not provided"}
                       </p>
                       <p className="text-sm text-gray-500">
-                        <span className="font-medium">Tracking Number:</span> {formData.trackingNumber}
+                        <span className="font-medium">Tracking Number:</span>{" "}
+                        {formData.trackingNumber}
                       </p>
                       <p className="text-sm text-gray-500">
                         <span className="font-medium">Customer:</span>{" "}
-                        {formData.customer?.company || formData.customer?.name || "Not selected"}
+                        {formData.customer?.company ||
+                          formData.customer?.name ||
+                          "Not selected"}
                       </p>
                       {formData.consignee && (
                         <p className="text-sm text-gray-500">
-                          <span className="font-medium">Consignee:</span> {formData.consignee}
+                          <span className="font-medium">Consignee:</span>{" "}
+                          {formData.consignee}
                         </p>
                       )}
                     </div>
@@ -668,17 +790,20 @@ const NewShipment: React.FC = () => {
                       <MapPin className="h-5 w-5 text-blue-500" />
                     </div>
                     <div className="ml-3">
-                      <p className="text-sm font-medium text-gray-900">Route Details</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        Route Details
+                      </p>
                       <p className="text-sm text-gray-500 mt-1">
                         <span className="font-medium">Origin:</span>{" "}
                         {formData.type === "SEA"
                           ? "Mombasa Port"
                           : formData.type === "AIR"
-                            ? "Juba International Airport"
-                            : formData.origin || "Not specified"}
+                          ? "Juba International Airport"
+                          : formData.origin || "Not specified"}
                       </p>
                       <p className="text-sm text-gray-500">
-                        <span className="font-medium">Destination:</span> {formData.destination || "Not specified"}
+                        <span className="font-medium">Destination:</span>{" "}
+                        {formData.destination || "Not specified"}
                       </p>
                     </div>
                   </div>
@@ -687,10 +812,14 @@ const NewShipment: React.FC = () => {
                       <CalendarIcon className="h-5 w-5 text-blue-500" />
                     </div>
                     <div className="ml-3">
-                      <p className="text-sm font-medium text-gray-900">Delivery Information</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        Delivery Information
+                      </p>
                       <p className="text-sm text-gray-500 mt-1">
                         <span className="font-medium">Expected Delivery:</span>{" "}
-                        {formData.arrivalDate ? format(new Date(formData.arrivalDate), "PPP") : "Not specified"}
+                        {formData.arrivalDate
+                          ? format(new Date(formData.arrivalDate), "PPP")
+                          : "Not specified"}
                       </p>
                     </div>
                   </div>
@@ -706,12 +835,16 @@ const NewShipment: React.FC = () => {
                       <div className="ml-3">
                         {formData.container && (
                           <p className="text-sm text-gray-500 mt-1">
-                            <span className="font-medium">Container Number:</span> {formData.container}
+                            <span className="font-medium">
+                              Container Number:
+                            </span>{" "}
+                            {formData.container}
                           </p>
                         )}
                         {formData.truck && (
                           <p className="text-sm text-gray-500 mt-1">
-                            <span className="font-medium">Truck Number:</span> {formData.truck}
+                            <span className="font-medium">Truck Number:</span>{" "}
+                            {formData.truck}
                           </p>
                         )}
                       </div>
@@ -726,32 +859,46 @@ const NewShipment: React.FC = () => {
                 </h3>
                 <div className="space-y-3">
                   {getRequiredDocumentTypes(formData.type).map((docType) => {
-                    const uploaded = formData.documents.some((d) => d.type === docType && d.file.url)
+                    const uploaded = formData.documents.some(
+                      (d) => d.type === docType && d.file.url
+                    );
                     return (
                       <div
                         key={docType}
-                        className={`flex items-center p-2 rounded-md ${uploaded ? "bg-green-50" : ""}`}
+                        className={`flex items-center p-2 rounded-md ${
+                          uploaded ? "bg-green-50" : ""
+                        }`}
                       >
                         <div
                           className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                            uploaded ? "bg-green-100" : "border-2 border-gray-300"
+                            uploaded
+                              ? "bg-green-100"
+                              : "border-2 border-gray-300"
                           }`}
                         >
-                          {uploaded && <Check className="h-4 w-4 text-green-500" />}
+                          {uploaded && (
+                            <Check className="h-4 w-4 text-green-500" />
+                          )}
                         </div>
-                        <span className={`ml-2 text-sm ${uploaded ? "text-gray-900" : "text-gray-500"}`}>
+                        <span
+                          className={`ml-2 text-sm ${
+                            uploaded ? "text-gray-900" : "text-gray-500"
+                          }`}
+                        >
                           {docType}
                         </span>
                       </div>
-                    )
+                    );
                   })}
                 </div>
-                {formData.documents.length < getRequiredDocumentTypes(formData.type).length && (
+                {formData.documents.length <
+                  getRequiredDocumentTypes(formData.type).length && (
                   <div className="mt-4 pt-4 border-t border-gray-100">
                     <div className="bg-yellow-50 rounded-md p-3 flex items-start">
                       <Info className="h-5 w-5 text-yellow-500 mt-0.5 flex-shrink-0" />
                       <p className="ml-3 text-sm text-yellow-700">
-                        Some documents are missing. You can still create the shipment and upload them later.
+                        Some documents are missing. You can still create the
+                        shipment and upload them later.
                       </p>
                     </div>
                   </div>
@@ -759,12 +906,12 @@ const NewShipment: React.FC = () => {
               </Card>
             </div>
           </div>
-        )
+        );
 
       default:
-        return null
+        return null;
     }
-  }
+  };
 
   return (
     <div className="bg-gray-50 min-h-screen py-2">
@@ -775,9 +922,12 @@ const NewShipment: React.FC = () => {
               <ArrowLeft size={16} className="mr-1" /> Back to Shipments
             </span>
           </Link>
-          <h1 className="text-xl font-bold text-gray-900">Create New Shipment</h1>
+          <h1 className="text-xl font-bold text-gray-900">
+            Create New Shipment
+          </h1>
           <p className="text-gray-500 mt-1 text-sm">
-            Follow the steps below to create a new {formData.type.toLowerCase()} shipment
+            Follow the steps below to create a new {formData.type.toLowerCase()}{" "}
+            shipment
           </p>
         </div>
 
@@ -785,22 +935,33 @@ const NewShipment: React.FC = () => {
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="flex items-center justify-between relative">
             {steps.map((step, index) => (
-              <div key={step.id} className={`flex items-center ${index === steps.length - 1 ? "" : "flex-1"}`}>
+              <div
+                key={step.id}
+                className={`flex items-center ${
+                  index === steps.length - 1 ? "" : "flex-1"
+                }`}
+              >
                 <div className="flex items-center relative">
                   <div
                     className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all ${
                       currentStep === step.id
                         ? "border-blue-600 bg-blue-600 text-white"
                         : steps.findIndex((s) => s.id === currentStep) > index
-                          ? "border-blue-600 bg-blue-600 text-white"
-                          : "border-gray-300 bg-white text-gray-500"
+                        ? "border-blue-600 bg-blue-600 text-white"
+                        : "border-gray-300 bg-white text-gray-500"
                     }`}
                   >
-                    {steps.findIndex((s) => s.id === currentStep) > index ? <Check size={16} /> : step.icon}
+                    {steps.findIndex((s) => s.id === currentStep) > index ? (
+                      <Check size={16} />
+                    ) : (
+                      step.icon
+                    )}
                   </div>
                   <span
                     className={`ml-2 text-sm font-medium ${
-                      currentStep === step.id ? "text-blue-600" : "text-gray-900"
+                      currentStep === step.id
+                        ? "text-blue-600"
+                        : "text-gray-900"
                     }`}
                   >
                     {step.label}
@@ -809,7 +970,9 @@ const NewShipment: React.FC = () => {
                 {index < steps.length - 1 && (
                   <div
                     className={`flex-1 h-1 mx-4 rounded transition-colors ${
-                      steps.findIndex((s) => s.id === currentStep) > index ? "bg-blue-600" : "bg-gray-200"
+                      steps.findIndex((s) => s.id === currentStep) > index
+                        ? "bg-blue-600"
+                        : "bg-gray-200"
                     }`}
                   />
                 )}
@@ -819,7 +982,9 @@ const NewShipment: React.FC = () => {
         </div>
 
         {/* Step Content */}
-        <Card className="mb-6 shadow-sm border border-gray-200 overflow-hidden">{renderStepContent()}</Card>
+        <Card className="mb-6 shadow-sm border border-gray-200 overflow-hidden">
+          {renderStepContent()}
+        </Card>
 
         {/* Navigation Buttons */}
         <div className="flex justify-between mb-8 p-4 bg-white rounded-lg shadow-sm">
@@ -883,7 +1048,7 @@ const NewShipment: React.FC = () => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default NewShipment
+export default NewShipment;

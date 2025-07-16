@@ -46,42 +46,42 @@ enum UserRole {
 
 // New Role model for flexible permission system
 model Role {
-  id           String       @id @default(cuid())
-  displayName  String       // Human-readable name (e.g., "Shipment Manager")
-  roleName     String       @unique // System name (e.g., "shipment_manager")
-  description  String?
-  permissions  String[]     // Array of permission strings
-  users        User[]       @relation("UserRoles")
-  isActive     Boolean      @default(true)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  id          String   @id @default(cuid())
+  displayName String // Human-readable name (e.g., "Shipment Manager")
+  roleName    String   @unique // System name (e.g., "shipment_manager")
+  description String?
+  permissions String[] // Array of permission strings
+  users       User[]   @relation("UserRoles")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([roleName])
 }
 
 model User {
-  id            String        @id @default(cuid())
+  id            String     @id @default(cuid())
   name          String
   firstName     String
   lastName      String
-  phone         String        @unique
-  email         String        @unique
+  phone         String     @unique
+  email         String     @unique
   emailVerified DateTime?
   image         String?
   jobTitle      String?
-  role          UserRole      @default(USER) // Keep for backward compatibility
-  roles         Role[]        @relation("UserRoles") // New many-to-many relationship
+  role          UserRole   @default(USER) // Keep for backward compatibility
+  roles         Role[]     @relation("UserRoles") // New many-to-many relationship
   password      String
   location      String? // Added for agent location tracking
-  status        Boolean       @default(true)
+  status        Boolean    @default(true)
   accounts      Account[]
   sessions      Session[]
   shipments     Shipment[] // Relation to shipments created by this user
   documents     Document[] // Relation to documents uploaded by this user
-  isVerfied     Boolean       @default(false)
+  isVerfied     Boolean    @default(false)
   token         String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
 }
 
 model Customer {
@@ -97,7 +97,7 @@ model Customer {
   consignee     String? // Default consignee for this customer
   isActive      Boolean @default(true)
   notes         String?
-  
+
   // Relationships
   shipments Shipment[]
   createdAt DateTime   @default(now())
@@ -105,43 +105,46 @@ model Customer {
 }
 
 model Shipment {
-  id             String          @id @default(cuid())
-  reference      String          @unique
-  trackingNumber String?         @unique
-  type           ShipmentType
-  client         String?
-  consignee      String?
-  origin         String
-  destination    String
-  status         ShipmentStatus  @default(CREATED)
-  container      String? // Used for sea freight
-  truck          String? // Used for road freight
-  arrivalDate    DateTime
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  invoiceStatus  InvoiceStatus   @default(PENDING)
-  creator        User            @relation(fields: [createdBy], references: [id])
-  createdBy      String
-  documents      Document[]
-  timeline       TimelineEvent[]
-  checkpoints    Checkpoint[]
-  Customer       Customer?       @relation(fields: [customerId], references: [id])
-  customerId     String?
-  TrackingEvent  TrackingEvent[]
+  id               String          @id @default(cuid())
+  reference        String          @unique
+  trackingNumber   String?         @unique
+  type             ShipmentType
+  client           String?
+  consignee        String?
+  origin           String
+  destination      String
+  status           ShipmentStatus  @default(CREATED)
+  container        String? // Used for sea freight
+  truck            String? // Used for road freight
+  airwayBillNumber String?
+  arrivalDate      DateTime? // Make optional if it's not always present at creation
+  statusUpdateDate DateTime? // New field to store the date of the last status update
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  invoiceStatus    InvoiceStatus   @default(PENDING)
+  creator          User            @relation(fields: [createdBy], references: [id])
+  createdBy        String
+  documents        Document[]
+  timeline         TimelineEvent[]
+  checkpoints      Checkpoint[]
+  Customer         Customer?       @relation(fields: [customerId], references: [id])
+  customerId       String?
+  TrackingEvent    TrackingEvent[]
 }
 
 model TrackingEvent {
-  id        String         @id @default(cuid())
-  status    ShipmentStatus
-  location  String?
-  notes     String? // Carrier notes
-  timestamp DateTime       @default(now())
-
+  id         String         @id @default(cuid())
+  status     ShipmentStatus
+  location   String?
+  notes      String? // Carrier notes
+  timestamp  DateTime       @default(now())
   // Relations
-  shipment   Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  shipment   Shipment       @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
   shipmentId String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  fileUrl    String? // New field for attached document URL
+  fileType   DocumentType? // New field for attached document type
 }
 
 // Enums
@@ -173,16 +176,19 @@ enum ShipmentType {
 }
 
 enum ShipmentStatus {
-  CREATED
-  DOCUMENT_RECEIVED
-  DOCUMENTS_SENT
-  CARGO_ARRIVED
-  DELIVERY_CONFIRMED
-  ENTRY_REGISTERED
-  CLEARED
-  IN_TRANSIT
-  DELIVERED
-  COMPLETED
+  CREATED // Initial status when shipment is created
+  DOCUMENT_RECEIVED // Documents for the shipment have been received
+  DOCUMENTS_SENT // Documents have been sent to relevant parties (e.g., customs)
+  CARGO_ARRIVED // Cargo has arrived at the destination port/airport/border
+  TRANSFERRED_TO_CFS // Cargo transferred to Container Freight Station (replaces DELIVERY_CONFIRMED)
+  ENTRY_REGISTERED // Customs entry has been registered
+  CUSTOM_RELEASED // Cargo cleared from customs (replaces CLEARED)
+  DELIVERY_ORDER_OBTAINED // Delivery order has been obtained
+  TAXES_PAID // Taxes and duties have been paid
+  NIMULE_BORDER_RELEASED // Specific status for Nimule border release
+  IN_TRANSIT // Shipment is currently in transit
+  DELIVERED // Shipment has been delivered to the consignee
+  EMPTY_RETURNED // Empty container/truck returned (replaces COMPLETED)
   DOCUMENT_REJECTED
 }
 
@@ -208,6 +214,7 @@ enum DocumentType {
   TAX_EXEMPTION
   CERTIFICATE_OF_ORIGIN
   CMR_WAYBILL
+  LETTER_OF_AUTHORIZATION
 }
 
 model Document {
@@ -235,6 +242,8 @@ model TimelineEvent {
   location   String?
   timestamp  DateTime       @default(now())
   createdBy  String
+  fileUrl    String? // New field for attached document URL
+  fileType   DocumentType? // New field for attached document type
 }
 
 model Checkpoint {

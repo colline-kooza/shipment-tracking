@@ -40,7 +40,7 @@ export type StatusUpdateNotificationData = {
 export async function sendDelayNotification(data: DelayNotificationData) {
   try {
     const response = await resend.emails.send({
-      from: "Trakit Notifications <orders@rwoma.com>",
+      from: "Trakit Notifications <info@lubegajovan.com>",
       to: [data.customerEmail],
       subject: `Shipment Delay Alert - ${data.shipment.reference}`,
       react: ShipmentDelayNotification(data),
@@ -66,7 +66,7 @@ export async function sendStatusUpdateNotification(
 ) {
   try {
     const response = await resend.emails.send({
-      from: "Trakit System <orders@rwoma.com>",
+      from: "Trakit System <info@lubegajovan.com>",
       to: [data.staffEmail],
       subject: `Shipment Status Update - ${data.shipment.reference}`,
       react: ShipmentStatusUpdate(data),

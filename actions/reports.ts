@@ -165,7 +165,7 @@ export async function generateReport(
       db.shipment.count({
         where: {
           ...baseWhere,
-          status: { in: ["DELIVERED", "COMPLETED"] },
+          status: { in: ["DELIVERED", "EMPTY_RETURNED"] },
         },
       }),
       db.customer.count({
@@ -393,7 +393,7 @@ export async function generateReport(
                   gte: month.start,
                   lte: month.end,
                 },
-                status: { in: ["DELIVERED", "COMPLETED"] },
+                status: { in: ["DELIVERED", "EMPTY_RETURNED"] },
               },
             }),
           ]);
@@ -416,7 +416,7 @@ export async function generateReport(
       _count: { id: true },
       where: {
         ...baseWhere,
-        status: { in: ["DELIVERED", "COMPLETED"] },
+        status: { in: ["DELIVERED", "EMPTY_RETURNED"] },
       },
       orderBy: {
         _count: {
@@ -430,7 +430,7 @@ export async function generateReport(
     const completedShipmentsForRoutes = await db.shipment.findMany({
       where: {
         ...baseWhere,
-        status: { in: ["DELIVERED", "COMPLETED"] },
+        status: { in: ["DELIVERED", "EMPTY_RETURNED"] },
       },
       select: {
         origin: true,
@@ -585,7 +585,7 @@ export async function generateReport(
     const totalCompletedShipments = await db.shipment.findMany({
       where: {
         ...baseWhere,
-        status: { in: ["DELIVERED", "COMPLETED"] },
+        status: { in: ["DELIVERED", "EMPTY_RETURNED"] },
       },
       select: {
         createdAt: true,
