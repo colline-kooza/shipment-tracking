@@ -85,7 +85,7 @@ model User {
 }
 
 model Customer {
-  id            String  @id @default(cuid())
+  id            String     @id @default(cuid())
   name          String
   email         String?
   phone         String?
@@ -95,41 +95,41 @@ model Customer {
   passport      String? // For individual customers
   company       String? // For company customers
   consignee     String? // Default consignee for this customer
-  isActive      Boolean @default(true)
+  isActive      Boolean    @default(true)
   notes         String?
-
   // Relationships
-  shipments Shipment[]
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  shipments     Shipment[]
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
 }
 
 model Shipment {
-  id               String          @id @default(cuid())
-  reference        String          @unique
-  trackingNumber   String?         @unique
-  type             ShipmentType
-  client           String?
-  consignee        String?
-  origin           String
-  destination      String
-  status           ShipmentStatus  @default(CREATED)
-  container        String? // Used for sea freight
-  truck            String? // Used for road freight
-  airwayBillNumber String?
-  arrivalDate      DateTime? // Make optional if it's not always present at creation
-  statusUpdateDate DateTime? // New field to store the date of the last status update
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
-  invoiceStatus    InvoiceStatus   @default(PENDING)
-  creator          User            @relation(fields: [createdBy], references: [id])
-  createdBy        String
-  documents        Document[]
-  timeline         TimelineEvent[]
-  checkpoints      Checkpoint[]
-  Customer         Customer?       @relation(fields: [customerId], references: [id])
-  customerId       String?
-  TrackingEvent    TrackingEvent[]
+  id                 String          @id @default(cuid())
+  reference          String          @unique
+  trackingNumber     String?         @unique
+  type               ShipmentType
+  client             String?
+  consignee          String?
+  origin             String
+  destination        String
+  status             ShipmentStatus  @default(CREATED)
+  container          String? // Used for sea freight
+  truck              String? // Used for road freight
+  airwayBillNumber   String?
+  billOfLadingNumber String? // Added new field for Bill of Lading Number
+  arrivalDate        DateTime? // Make optional if it's not always present at creation
+  statusUpdateDate   DateTime? // New field to store the date of the last status update
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  invoiceStatus      InvoiceStatus   @default(PENDING)
+  creator            User            @relation(fields: [createdBy], references: [id])
+  createdBy          String
+  documents          Document[]
+  timeline           TimelineEvent[]
+  checkpoints        Checkpoint[]
+  Customer           Customer?       @relation(fields: [customerId], references: [id])
+  customerId         String?
+  TrackingEvent      TrackingEvent[]
 }
 
 model TrackingEvent {
@@ -190,6 +190,10 @@ enum ShipmentStatus {
   DELIVERED // Shipment has been delivered to the consignee
   EMPTY_RETURNED // Empty container/truck returned (replaces COMPLETED)
   DOCUMENT_REJECTED
+  UPDATED // Added for shipment updates
+  ARRIVAL_MALABA
+  DEPARTURE_MALABA
+  ARRIVAL_NIMULE
 }
 
 enum InvoiceStatus {

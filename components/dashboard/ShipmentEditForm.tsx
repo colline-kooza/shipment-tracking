@@ -1,5 +1,4 @@
 "use client"
-
 import type React from "react"
 import { useState, useEffect } from "react"
 import Link from "next/link"
@@ -19,6 +18,8 @@ import {
 } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { CalendarIcon } from "lucide-react"
@@ -26,15 +27,15 @@ import { format } from "date-fns"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { cn } from "@/lib/utils"
-import type { DocumentUpload } from "@/components/docs/DocumentUploader"
+import type { DocumentUpload } from "@/actions/trakit-shipments" // Import DocumentUpload from actions
 import { useShipmentById, useUpdateShipment } from "@/hooks/useShipmentQueries2"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ShipmentType } from "@prisma/client" // Import ShipmentType from Prisma
 
 // Define TypeScript types
-export type ShipmentType = "SEA" | "AIR" | "ROAD"
 export type Step = "type" | "details" | "documents" | "review"
 
-// Updated FormData interface to handle nullable fields
+// Updated FormData interface to handle nullable fields and new fields
 interface FormData {
   type: ShipmentType
   client: string | null
@@ -46,6 +47,8 @@ interface FormData {
   arrivalDate: string
   container: string | null
   truck: string | null
+  airwayBillNumber: string | null
+  billOfLadingNumber: string | null
   documents: DocumentUpload[]
 }
 
@@ -63,7 +66,7 @@ const ShipmentEditForm: React.FC<ShipmentEditFormProps> = ({ id }) => {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState<Step>("details") // Start with details for edit
   const [formData, setFormData] = useState<FormData>({
-    type: "SEA",
+    type: ShipmentType.SEA, // Use Prisma enum
     client: null,
     consignee: null,
     reference: "",
@@ -73,13 +76,15 @@ const ShipmentEditForm: React.FC<ShipmentEditFormProps> = ({ id }) => {
     arrivalDate: "",
     container: null,
     truck: null,
+    airwayBillNumber: null,
+    billOfLadingNumber: null,
     documents: [],
   })
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({})
-
   // Fetch existing shipment data
   const { data: shipmentResponse, isLoading, error } = useShipmentById(id)
   const { mutate: updateShipment, isPending } = useUpdateShipment()
+
   const shipment = shipmentResponse?.success ? shipmentResponse.data : null
 
   // Populate form with existing data
@@ -96,6 +101,8 @@ const ShipmentEditForm: React.FC<ShipmentEditFormProps> = ({ id }) => {
         arrivalDate: shipment.arrivalDate ? new Date(shipment.arrivalDate).toISOString().split("T")[0] : "",
         container: shipment.container,
         truck: shipment.truck,
+        airwayBillNumber: shipment.airwayBillNumber,
+        billOfLadingNumber: shipment.billOfLadingNumber,
         documents:
           shipment.documents?.map((doc) => ({
             type: doc.type,
@@ -118,7 +125,6 @@ const ShipmentEditForm: React.FC<ShipmentEditFormProps> = ({ id }) => {
   // Validation function for each step
   const validateStep = (step: Step): boolean => {
     const newErrors: Partial<Record<keyof FormData, string>> = {}
-
     switch (step) {
       case "type":
         if (!formData.type) {
@@ -132,7 +138,7 @@ const ShipmentEditForm: React.FC<ShipmentEditFormProps> = ({ id }) => {
         if (!formData.reference.trim()) {
           newErrors.reference = "Reference number is required"
         }
-        if (formData.type === "ROAD" && !formData.origin.trim()) {
+        if (formData.type === ShipmentType.ROAD && !formData.origin.trim()) {
           newErrors.origin = "Origin is required for road shipments"
         }
         if (!formData.destination.trim()) {
@@ -146,7 +152,7 @@ const ShipmentEditForm: React.FC<ShipmentEditFormProps> = ({ id }) => {
             newErrors.arrivalDate = "Invalid date format"
           }
         }
-        if (formData.type === "SEA" && !formData.container?.trim()) {
+        if (formData.type === ShipmentType.SEA && !formData.container?.trim()) {
           newErrors.container = "Container number is required for sea shipments"
         }
         break
@@ -161,7 +167,7 @@ const ShipmentEditForm: React.FC<ShipmentEditFormProps> = ({ id }) => {
         if (!formData.reference.trim()) {
           newErrors.reference = "Reference number is required"
         }
-        if (formData.type === "ROAD" && !formData.origin.trim()) {
+        if (formData.type === ShipmentType.ROAD && !formData.origin.trim()) {
           newErrors.origin = "Origin is required for road shipments"
         }
         if (!formData.destination.trim()) {
@@ -175,12 +181,11 @@ const ShipmentEditForm: React.FC<ShipmentEditFormProps> = ({ id }) => {
             newErrors.arrivalDate = "Invalid date format"
           }
         }
-        if (formData.type === "SEA" && !formData.container?.trim()) {
+        if (formData.type === ShipmentType.SEA && !formData.container?.trim()) {
           newErrors.container = "Container number is required for sea shipments"
         }
         break
     }
-
     setErrors(newErrors)
     if (Object.keys(newErrors).length > 0) {
       toast.error("Please fix the following errors:", {
@@ -220,9 +225,9 @@ const ShipmentEditForm: React.FC<ShipmentEditFormProps> = ({ id }) => {
     }
 
     let originValue = formData.origin
-    if (formData.type === "SEA") {
+    if (formData.type === ShipmentType.SEA) {
       originValue = "Mombasa Port"
-    } else if (formData.type === "AIR") {
+    } else if (formData.type === ShipmentType.AIR) {
       originValue = "Juba International Airport"
     }
 
@@ -234,8 +239,10 @@ const ShipmentEditForm: React.FC<ShipmentEditFormProps> = ({ id }) => {
       origin: originValue,
       destination: formData.destination,
       arrivalDate: new Date(formData.arrivalDate),
-      container: formData.type === "SEA" ? formData.container || undefined : undefined,
+      container: formData.type === ShipmentType.SEA ? formData.container || undefined : undefined,
       truck: formData.truck || undefined,
+      airwayBillNumber: formData.airwayBillNumber || undefined,
+      billOfLadingNumber: formData.billOfLadingNumber || undefined,
     }
 
     updateShipment(
@@ -339,19 +346,19 @@ const ShipmentEditForm: React.FC<ShipmentEditFormProps> = ({ id }) => {
             )}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <ShipmentTypeOption
-                type="SEA"
+                type={ShipmentType.SEA}
                 label="Sea Freight"
                 description="Container shipping via Mombasa Port"
                 icon={<Container className="h-6 w-6 text-blue-500" />}
               />
               <ShipmentTypeOption
-                type="AIR"
+                type={ShipmentType.AIR}
                 label="Air Freight"
                 description="Air cargo via Juba International Airport"
                 icon={<PlaneLanding className="h-6 w-6 text-blue-500" />}
               />
               <ShipmentTypeOption
-                type="ROAD"
+                type={ShipmentType.ROAD}
                 label="Road Freight"
                 description="Direct trucking service"
                 icon={<Truck className="h-6 w-6 text-blue-500" />}
@@ -368,12 +375,12 @@ const ShipmentEditForm: React.FC<ShipmentEditFormProps> = ({ id }) => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Client Name</label>
+                <Label className="block text-sm font-medium text-gray-700">Client Name</Label>
                 <div className="relative rounded-md shadow-sm">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <User className="h-5 w-5 text-gray-400" />
                   </div>
-                  <input
+                  <Input
                     type="text"
                     value={formData.client || ""}
                     onChange={(e) => setFormData({ ...formData, client: e.target.value || null })}
@@ -384,12 +391,12 @@ const ShipmentEditForm: React.FC<ShipmentEditFormProps> = ({ id }) => {
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Consignee</label>
+                <Label className="block text-sm font-medium text-gray-700">Consignee</Label>
                 <div className="relative rounded-md shadow-sm">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Users className="h-5 w-5 text-gray-400" />
                   </div>
-                  <input
+                  <Input
                     type="text"
                     value={formData.consignee || ""}
                     onChange={(e) => setFormData({ ...formData, consignee: e.target.value || null })}
@@ -399,12 +406,12 @@ const ShipmentEditForm: React.FC<ShipmentEditFormProps> = ({ id }) => {
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Reference Number</label>
+                <Label className="block text-sm font-medium text-gray-700">Reference Number</Label>
                 <div className="relative rounded-md shadow-sm">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Package className="h-5 w-5 text-gray-400" />
                   </div>
-                  <input
+                  <Input
                     type="text"
                     value={formData.reference}
                     onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
@@ -415,12 +422,12 @@ const ShipmentEditForm: React.FC<ShipmentEditFormProps> = ({ id }) => {
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Tracking Number</label>
+                <Label className="block text-sm font-medium text-gray-700">Tracking Number</Label>
                 <div className="relative rounded-md shadow-sm">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Package className="h-5 w-5 text-gray-400" />
                   </div>
-                  <input
+                  <Input
                     type="text"
                     value={formData.trackingNumber || ""}
                     disabled
@@ -428,14 +435,60 @@ const ShipmentEditForm: React.FC<ShipmentEditFormProps> = ({ id }) => {
                   />
                 </div>
               </div>
+              {/* Airway Bill Number field */}
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Origin</label>
+                <Label htmlFor="airwayBillNumber">
+                  Airway Bill Number <span className="text-gray-400 text-xs">(Optional)</span>
+                </Label>
+                <div className="relative rounded-md shadow-sm">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FileText className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <Input
+                    id="airwayBillNumber"
+                    value={formData.airwayBillNumber || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        airwayBillNumber: e.target.value || null,
+                      })
+                    }
+                    className="pl-10"
+                    placeholder="Enter airway bill number (optional)"
+                  />
+                </div>
+              </div>
+              {/* Bill of Lading Number field */}
+              <div className="space-y-2">
+                <Label htmlFor="billOfLadingNumber">
+                  Bill of Lading Number <span className="text-gray-400 text-xs">(Optional)</span>
+                </Label>
+                <div className="relative rounded-md shadow-sm">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FileText className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <Input
+                    id="billOfLadingNumber"
+                    value={formData.billOfLadingNumber || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        billOfLadingNumber: e.target.value || null,
+                      })
+                    }
+                    className="pl-10"
+                    placeholder="Enter bill of lading number (optional)"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="block text-sm font-medium text-gray-700">Origin</Label>
                 <div className="relative rounded-md shadow-sm">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <MapPin className="h-5 w-5 text-gray-400" />
                   </div>
-                  {formData.type === "ROAD" ? (
-                    <input
+                  {formData.type === ShipmentType.ROAD ? (
+                    <Input
                       type="text"
                       value={formData.origin}
                       onChange={(e) => setFormData({ ...formData, origin: e.target.value })}
@@ -443,9 +496,9 @@ const ShipmentEditForm: React.FC<ShipmentEditFormProps> = ({ id }) => {
                       placeholder="Enter origin location"
                     />
                   ) : (
-                    <input
+                    <Input
                       type="text"
-                      value={formData.type === "SEA" ? "Mombasa Port" : "Juba International Airport"}
+                      value={formData.type === ShipmentType.SEA ? "Mombasa Port" : "Juba International Airport"}
                       disabled
                       className="bg-gray-50 block w-full pl-10 sm:text-sm border-gray-300 rounded-md py-2 border"
                     />
@@ -454,12 +507,12 @@ const ShipmentEditForm: React.FC<ShipmentEditFormProps> = ({ id }) => {
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Destination</label>
+                <Label className="block text-sm font-medium text-gray-700">Destination</Label>
                 <div className="relative rounded-md shadow-sm">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <MapPin className="h-5 w-5 text-gray-400" />
                   </div>
-                  <input
+                  <Input
                     type="text"
                     value={formData.destination}
                     onChange={(e) => setFormData({ ...formData, destination: e.target.value })}
@@ -470,7 +523,7 @@ const ShipmentEditForm: React.FC<ShipmentEditFormProps> = ({ id }) => {
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Expected Delivery Date</label>
+                <Label className="block text-sm font-medium text-gray-700">Expected Delivery Date</Label>
                 <div className="relative rounded-md shadow-sm">
                   <Popover>
                     <PopoverTrigger asChild>
@@ -500,14 +553,14 @@ const ShipmentEditForm: React.FC<ShipmentEditFormProps> = ({ id }) => {
                   {errors.arrivalDate && <p className="text-red-500 text-xs mt-1">{errors.arrivalDate}</p>}
                 </div>
               </div>
-              {formData.type === "SEA" && (
+              {formData.type === ShipmentType.SEA && (
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Container Number</label>
+                  <Label className="block text-sm font-medium text-gray-700">Container Number</Label>
                   <div className="relative rounded-md shadow-sm">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <Container className="h-5 w-5 text-gray-400" />
                     </div>
-                    <input
+                    <Input
                       type="text"
                       value={formData.container || ""}
                       onChange={(e) => setFormData({ ...formData, container: e.target.value || null })}
@@ -519,14 +572,14 @@ const ShipmentEditForm: React.FC<ShipmentEditFormProps> = ({ id }) => {
                 </div>
               )}
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
+                <Label className="block text-sm font-medium text-gray-700">
                   Truck Number <span className="text-gray-400 text-xs">(Optional)</span>
-                </label>
+                </Label>
                 <div className="relative rounded-md shadow-sm">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Truck className="h-5 w-5 text-gray-400" />
                   </div>
-                  <input
+                  <Input
                     type="text"
                     value={formData.truck || ""}
                     onChange={(e) => setFormData({ ...formData, truck: e.target.value || null })}
@@ -583,9 +636,9 @@ const ShipmentEditForm: React.FC<ShipmentEditFormProps> = ({ id }) => {
                 <div className="space-y-4">
                   <div className="flex items-start">
                     <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
-                      {formData.type === "SEA" ? (
+                      {formData.type === ShipmentType.SEA ? (
                         <Container className="h-5 w-5 text-blue-500" />
-                      ) : formData.type === "AIR" ? (
+                      ) : formData.type === ShipmentType.AIR ? (
                         <PlaneLanding className="h-5 w-5 text-blue-500" />
                       ) : (
                         <Truck className="h-5 w-5 text-blue-500" />
@@ -593,9 +646,9 @@ const ShipmentEditForm: React.FC<ShipmentEditFormProps> = ({ id }) => {
                     </div>
                     <div className="ml-3">
                       <p className="text-sm font-medium text-gray-900">
-                        {formData.type === "SEA"
+                        {formData.type === ShipmentType.SEA
                           ? "Sea Freight"
-                          : formData.type === "AIR"
+                          : formData.type === ShipmentType.AIR
                             ? "Air Freight"
                             : "Road Freight"}
                       </p>
@@ -614,6 +667,16 @@ const ShipmentEditForm: React.FC<ShipmentEditFormProps> = ({ id }) => {
                           <span className="font-medium">Consignee:</span> {formData.consignee}
                         </p>
                       )}
+                      {formData.airwayBillNumber && (
+                        <p className="text-sm text-gray-500">
+                          <span className="font-medium">Airway Bill Number:</span> {formData.airwayBillNumber}
+                        </p>
+                      )}
+                      {formData.billOfLadingNumber && (
+                        <p className="text-sm text-gray-500">
+                          <span className="font-medium">Bill of Lading Number:</span> {formData.billOfLadingNumber}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-start border-t border-gray-100 pt-4">
@@ -624,9 +687,9 @@ const ShipmentEditForm: React.FC<ShipmentEditFormProps> = ({ id }) => {
                       <p className="text-sm font-medium text-gray-900">Route Details</p>
                       <p className="text-sm text-gray-500 mt-1">
                         <span className="font-medium">Origin:</span>{" "}
-                        {formData.type === "SEA"
+                        {formData.type === ShipmentType.SEA
                           ? "Mombasa Port"
-                          : formData.type === "AIR"
+                          : formData.type === ShipmentType.AIR
                             ? "Juba International Airport"
                             : formData.origin || "Not specified"}
                       </p>

@@ -1,38 +1,60 @@
 "use server";
-
 import { getAuthUser } from "@/config/useAuth";
 import { db } from "@/prisma/db";
 import { revalidatePath } from "next/cache";
-import { DocumentStatus, ShipmentStatus, ShipmentType } from "@prisma/client";
+import {
+  DocumentStatus,
+  type ShipmentStatus,
+  type ShipmentType,
+  type DocumentType,
+  type Prisma,
+} from "@prisma/client";
 import { generateShipmentReference } from "@/utils/shipmentUtils";
 import ShipmentStatusUpdateEmail from "@/components/emails/sendShipmentStatusUpdate";
 import { Resend } from "resend";
-import { DocumentType2 } from "@/hooks/useShipmentQueries2";
 
 // Define DTO types
 export type DocumentUpload = {
-  type: string;
+  type: DocumentType; // Use Prisma's DocumentType enum
   file: {
     url: string;
     name: string;
   };
 };
 
-export type CreateShipmentDTO = {
+export interface CreateShipmentDTO {
   type: ShipmentType;
   client?: string | null;
-  reference?: string;
-  consignee?: string;
-  trackingNumber?: string;
-  origin: string;
   customerId: string;
+  consignee?: string | null;
+  reference: string;
+  trackingNumber: string;
+  origin: string;
   destination: string;
   arrivalDate: Date;
-  container?: string;
-  truck?: string;
-  documents: DocumentUpload[];
+  container?: string | null;
+  truck?: string | null;
   airwayBillNumber?: string | null;
-};
+  billOfLadingNumber?: string | null;
+  documents?: DocumentUpload[];
+}
+
+export interface UpdateShipmentDTO {
+  type?: ShipmentType;
+  client?: string | null;
+  customerId?: string | null; // Allow null for disconnecting
+  consignee?: string | null;
+  reference?: string;
+  trackingNumber?: string;
+  origin?: string;
+  destination?: string;
+  arrivalDate?: Date;
+  container?: string | null;
+  truck?: string | null;
+  airwayBillNumber?: string | null;
+  billOfLadingNumber?: string | null;
+  // documents?: DocumentUpload[]; // Documents are handled separately, not directly in shipment update
+}
 
 export type ShipmentFilters = {
   searchQuery?: string;
@@ -43,7 +65,7 @@ export type ShipmentFilters = {
   sortOrder?: "asc" | "desc";
 };
 
-// Minimal shipment type for list view
+// Minimal shipment type for list view - UPDATED
 export type ShipmentListItem = {
   id: string;
   reference: string;
@@ -55,6 +77,8 @@ export type ShipmentListItem = {
   arrivalDate: Date | null;
   container: string | null;
   truck: string | null;
+  airwayBillNumber?: string | null; // Added
+  billOfLadingNumber?: string | null; // Added
   createdAt: Date;
   type: string;
 };
@@ -87,6 +111,8 @@ export type ShipmentEmailData = {
   type: string;
   createdAt: Date;
   consignee?: string | null;
+  airwayBillNumber?: string | null;
+  billOfLadingNumber?: string | null;
 };
 
 export type CustomerEmailData = {
@@ -113,7 +139,6 @@ async function sendShipmentStatusUpdateEmail(
       console.warn("RESEND_API_KEY not configured");
       return { success: false, error: "Email service not configured" };
     }
-
     const response = await resend.emails.send({
       from: "Shipments <info@lubegajovan.com>",
       to: [customerEmail],
@@ -124,11 +149,9 @@ async function sendShipmentStatusUpdateEmail(
         notes,
       }),
     });
-
     if (!response) {
       throw new Error("Failed to send email - no response from service");
     }
-
     return { success: true };
   } catch (error) {
     console.error("Failed to send shipment status update email:", error);
@@ -148,7 +171,6 @@ async function sendShipmentCreationEmail(
       console.warn("RESEND_API_KEY not configured");
       return { success: false, error: "Email service not configured" };
     }
-
     console.log(customerEmail, "email");
     const response = await resend.emails.send({
       from: "Shipments <info@lubegajovan.com>",
@@ -165,7 +187,6 @@ async function sendShipmentCreationEmail(
     if (!response) {
       throw new Error("Failed to send email - no response from service");
     }
-
     return { success: true };
   } catch (error) {
     console.error("Failed to send shipment creation email:", error);
@@ -180,7 +201,6 @@ async function getCustomerEmail(
   customerId: string | null
 ): Promise<CustomerEmailData | null> {
   if (!customerId) return null;
-
   try {
     const customer = await db.customer.findUnique({
       where: { id: customerId },
@@ -190,7 +210,6 @@ async function getCustomerEmail(
         name: true,
       },
     });
-
     return customer;
   } catch (error) {
     console.error("Failed to get customer email:", error);
@@ -201,7 +220,6 @@ async function getCustomerEmail(
 export async function createShipment(data: CreateShipmentDTO) {
   try {
     const user = await getAuthUser();
-
     if (!user?.id) {
       return {
         success: false,
@@ -212,7 +230,6 @@ export async function createShipment(data: CreateShipmentDTO) {
 
     const reference =
       data.reference || (await generateShipmentReference(data.type));
-    // console.log(data.airwayBillNumber, "nuuuuuu");
     const shipment = await db.shipment.create({
       data: {
         reference,
@@ -229,6 +246,7 @@ export async function createShipment(data: CreateShipmentDTO) {
         createdBy: user.id,
         status: "CREATED",
         airwayBillNumber: data.airwayBillNumber,
+        billOfLadingNumber: data.billOfLadingNumber,
         timeline: {
           create: {
             status: "CREATED",
@@ -246,7 +264,7 @@ export async function createShipment(data: CreateShipmentDTO) {
           await db.document.create({
             data: {
               name: doc.file.name,
-              type: doc.type as any,
+              type: doc.type, // Use DocumentType directly
               fileUrl: doc.file.url,
               shipmentId: shipment.id,
               userId: user.id,
@@ -254,7 +272,6 @@ export async function createShipment(data: CreateShipmentDTO) {
           });
         })
       );
-
       // Add timeline event for document upload
       await db.timelineEvent.create({
         data: {
@@ -283,24 +300,22 @@ export async function createShipment(data: CreateShipmentDTO) {
         type: shipment.type,
         createdAt: shipment.createdAt,
         consignee: shipment.consignee,
+        airwayBillNumber: shipment.airwayBillNumber,
+        billOfLadingNumber: shipment.billOfLadingNumber,
       };
-
       const emailResult = await sendShipmentCreationEmail(
         customer.email,
         shipmentEmailData
       );
-
       if (!emailResult.success) {
         console.warn(
           "Failed to send shipment creation email:",
           emailResult.error
         );
-        // Continue with the process even if email fails
       }
     }
 
     revalidatePath("/dashboard/shipments");
-
     return {
       success: true,
       data: shipment,
@@ -316,13 +331,7 @@ export async function createShipment(data: CreateShipmentDTO) {
   }
 }
 
-export async function updateShipmentStatus(
-  id: string,
-  status: ShipmentStatus,
-  notes?: string,
-  statusDate?: string,
-  documentFile?: { url: string; name: string; type: DocumentType2 }
-) {
+export async function updateShipment(id: string, data: UpdateShipmentDTO) {
   try {
     const user = await getAuthUser();
     if (!user?.id) {
@@ -333,6 +342,73 @@ export async function updateShipmentStatus(
       };
     }
 
+    // Destructure customerId from the input data
+    const { customerId, ...restOfData } = data;
+
+    // Build the update payload for Prisma's ShipmentUpdateInput
+    const updatePayload: Prisma.ShipmentUpdateInput = {
+      ...restOfData, // Spread all other fields that can be directly updated
+      updatedAt: new Date(),
+    };
+
+    // Handle customerId relation update
+    if (customerId !== undefined) {
+      if (customerId === null) {
+        // If customerId is explicitly null, disconnect the existing customer relation
+        updatePayload.Customer = { disconnect: true };
+      } else {
+        // If customerId is a string, connect to the specified customer
+        updatePayload.Customer = { connect: { id: customerId } };
+      }
+    }
+
+    const shipment = await db.shipment.update({
+      where: { id },
+      data: updatePayload, // Pass the carefully constructed updatePayload
+    });
+
+    // Add timeline event for shipment update
+    await db.timelineEvent.create({
+      data: {
+        shipmentId: id,
+        status: "UPDATED", // Now "UPDATED" is a valid status in Prisma schema
+        notes: "Shipment details updated",
+        createdBy: user.id,
+      },
+    });
+
+    revalidatePath("/dashboard/shipments");
+    return {
+      success: true,
+      data: shipment,
+      error: null,
+    };
+  } catch (error) {
+    console.error("Failed to update shipment:", error);
+    return {
+      success: false,
+      error: "Failed to update shipment: " + (error as Error).message,
+      data: null,
+    };
+  }
+}
+
+export async function updateShipmentStatus(
+  id: string,
+  status: ShipmentStatus,
+  notes?: string,
+  statusDate?: string,
+  documentFile?: { url: string; name: string; type: DocumentType } // Use DocumentType directly
+) {
+  try {
+    const user = await getAuthUser();
+    if (!user?.id) {
+      return {
+        success: false,
+        error: "Unauthorized access",
+        data: null,
+      };
+    }
     const currentShipment = await db.shipment.findUnique({
       where: { id },
       select: {
@@ -350,9 +426,10 @@ export async function updateShipmentStatus(
         createdAt: true,
         consignee: true,
         customerId: true,
+        airwayBillNumber: true,
+        billOfLadingNumber: true,
       },
     });
-
     if (!currentShipment) {
       return {
         success: false,
@@ -360,9 +437,7 @@ export async function updateShipmentStatus(
         data: null,
       };
     }
-
     const previousStatus = currentShipment.status;
-
     // Update shipment status and statusUpdateDate
     const updatedShipment = await db.shipment.update({
       where: { id },
@@ -371,7 +446,6 @@ export async function updateShipmentStatus(
         statusUpdateDate: statusDate ? new Date(statusDate) : undefined,
       },
     });
-
     // Send email notification to customer if status changed
     if (previousStatus !== status) {
       const customer = await getCustomerEmail(currentShipment.customerId);
@@ -390,6 +464,8 @@ export async function updateShipmentStatus(
           type: currentShipment.type,
           createdAt: currentShipment.createdAt,
           consignee: currentShipment.consignee,
+          airwayBillNumber: currentShipment.airwayBillNumber,
+          billOfLadingNumber: currentShipment.billOfLadingNumber,
         };
         const emailResult = await sendShipmentStatusUpdateEmail(
           customer.email,
@@ -397,7 +473,6 @@ export async function updateShipmentStatus(
           previousStatus,
           notes
         );
-
         if (!emailResult.success) {
           console.warn(
             "Failed to send shipment status update email:",
@@ -406,7 +481,6 @@ export async function updateShipmentStatus(
         }
       }
     }
-
     // Create timeline event
     await db.timelineEvent.create({
       data: {
@@ -419,7 +493,6 @@ export async function updateShipmentStatus(
         fileType: documentFile?.type || null,
       },
     });
-
     // If a document was provided, create a new Document entry
     if (
       documentFile &&
@@ -439,10 +512,8 @@ export async function updateShipmentStatus(
         },
       });
     }
-
     revalidatePath(`/dashboard/shipments/${id}`);
     revalidatePath("/dashboard/shipments");
-
     return {
       success: true,
       data: updatedShipment,
@@ -469,17 +540,13 @@ export async function getShipments(
     sortBy = "date",
     sortOrder = "desc",
   } = filters;
-
   const skip = (page - 1) * limit;
-
   // Base query conditions
   const where: any = {};
-
   // Add status filter if not 'all'
   if (status !== "all") {
     where.status = status;
   }
-
   if (searchQuery) {
     where.OR = [
       { reference: { contains: searchQuery, mode: "insensitive" } },
@@ -487,18 +554,14 @@ export async function getShipments(
       { trackingNumber: { contains: searchQuery, mode: "insensitive" } },
     ];
   }
-
   const totalCount = await db.shipment.count({ where });
-
   // Sort order mapping
-  let orderBy: any = {};
-
+  const orderBy: any = {};
   if (sortBy === "date") {
     orderBy.createdAt = sortOrder;
   } else {
     orderBy.createdAt = sortOrder;
   }
-
   let shipments = await db.shipment.findMany({
     where,
     select: {
@@ -511,6 +574,8 @@ export async function getShipments(
       arrivalDate: true,
       container: true,
       truck: true,
+      airwayBillNumber: true, // Added
+      billOfLadingNumber: true, // Added
       createdAt: true,
       type: true,
       trackingNumber: true,
@@ -519,7 +584,6 @@ export async function getShipments(
     skip,
     take: limit,
   });
-
   // If sorting by status, we need to sort in memory
   if (sortBy === "status") {
     // Status rank mapping for sorting
@@ -528,22 +592,27 @@ export async function getShipments(
       DOCUMENT_RECEIVED: 2,
       DOCUMENTS_SENT: 3,
       CARGO_ARRIVED: 4,
-      DELIVERY_CONFIRMED: 5,
+      TRANSFERRED_TO_CFS: 5,
       ENTRY_REGISTERED: 6,
-      CLEARED: 7,
-      IN_TRANSIT: 8,
-      DELIVERED: 9,
-      COMPLETED: 10,
+      CUSTOM_RELEASED: 7,
+      DELIVERY_ORDER_OBTAINED: 8,
+      TAXES_PAID: 9,
+      NIMULE_BORDER_RELEASED: 10,
+      ARRIVAL_MALABA: 11,
+      DEPARTURE_MALABA: 12,
+      ARRIVAL_NIMULE: 13,
+      IN_TRANSIT: 14,
+      DELIVERED: 15,
+      EMPTY_RETURNED: 16,
+      DOCUMENT_REJECTED: 17,
+      UPDATED: 18,
     };
-
     shipments = shipments.sort((a, b) => {
       const rankA = statusRank[a.status as keyof typeof statusRank] || 0;
       const rankB = statusRank[b.status as keyof typeof statusRank] || 0;
-
       return sortOrder === "asc" ? rankA - rankB : rankB - rankA;
     });
   }
-
   return {
     shipments,
     totalCount,
@@ -562,9 +631,8 @@ export async function getShipmentById(id: string) {
       return {
         success: false,
         error: "Unauthorized access",
-      };
+      } as ApiResponse<null>;
     }
-
     const shipment = await db.shipment.findUnique({
       where: { id },
       include: {
@@ -596,20 +664,17 @@ export async function getShipmentById(id: string) {
         },
       },
     });
-
     if (!shipment) {
       return {
         success: false,
         error: "Shipment not found",
       } as ApiResponse<null>;
     }
-
     // Add consignee to the shipment object for easier access
     const shipmentWithConsignee = {
       ...shipment,
       consignee: shipment.Customer?.consignee || null,
     };
-
     return {
       success: true,
       data: shipmentWithConsignee,
@@ -620,63 +685,6 @@ export async function getShipmentById(id: string) {
       success: false,
       error: "Failed to fetch shipment details",
     } as ApiResponse<null>;
-  }
-}
-
-export type UpdateShipmentDTO = {
-  type?: ShipmentType;
-  client?: string;
-  consignee?: string;
-  reference?: string;
-  origin?: string;
-  destination?: string;
-  arrivalDate?: Date;
-  container?: string;
-  truck?: string;
-};
-
-export async function updateShipment(id: string, data: UpdateShipmentDTO) {
-  try {
-    const user = await getAuthUser();
-    if (!user?.id) {
-      return {
-        success: false,
-        error: "Unauthorized access",
-        data: null,
-      };
-    }
-
-    const shipment = await db.shipment.update({
-      where: { id },
-      data: {
-        ...data,
-        updatedAt: new Date(),
-      },
-    });
-
-    // Add timeline event for shipment update
-    await db.timelineEvent.create({
-      data: {
-        shipmentId: id,
-        status: "CREATED", // or whatever status makes sense
-        notes: "Shipment details updated",
-        createdBy: user.id,
-      },
-    });
-
-    revalidatePath("/dashboard/shipments");
-    return {
-      success: true,
-      data: shipment,
-      error: null,
-    };
-  } catch (error) {
-    console.error("Failed to update shipment:", error);
-    return {
-      success: false,
-      error: "Failed to update shipment: " + (error as Error).message,
-      data: null,
-    };
   }
 }
 
@@ -691,11 +699,9 @@ export async function deleteShipment(id: string) {
         data: null,
       };
     }
-
     await db.shipment.delete({
       where: { id },
     });
-
     revalidatePath("/dashboard/shipments");
     return {
       success: true,

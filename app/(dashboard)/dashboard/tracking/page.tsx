@@ -100,12 +100,16 @@ export default function TrackingPage() {
       [ShipmentStatus.CARGO_ARRIVED]: 5,
       [ShipmentStatus.TRANSFERRED_TO_CFS]: 6,
       [ShipmentStatus.ENTRY_REGISTERED]: 7,
-      [ShipmentStatus.CUSTOM_RELEASED]: 8, // Renamed from CLEARED
+      [ShipmentStatus.CUSTOM_RELEASED]: 8,
       [ShipmentStatus.DELIVERY_ORDER_OBTAINED]: 9,
       [ShipmentStatus.TAXES_PAID]: 10,
-      [ShipmentStatus.NIMULE_BORDER_RELEASED]: 11,
-      [ShipmentStatus.DELIVERED]: 12,
-      [ShipmentStatus.EMPTY_RETURNED]: 13, // Renamed from COMPLETED
+      [ShipmentStatus.ARRIVAL_MALABA]: 11,
+      [ShipmentStatus.DEPARTURE_MALABA]: 12,
+      [ShipmentStatus.ARRIVAL_NIMULE]: 13,
+      [ShipmentStatus.NIMULE_BORDER_RELEASED]: 14,
+      [ShipmentStatus.DELIVERED]: 15,
+      [ShipmentStatus.EMPTY_RETURNED]: 16,
+      [ShipmentStatus.UPDATED]: 17, // Generic update status
       [ShipmentStatus.DOCUMENT_REJECTED]: 0, // Special case, not part of linear progress
     }
 
@@ -114,7 +118,7 @@ export default function TrackingPage() {
       Documentation: 3, // After DOCUMENTS_SENT
       "In Transit": 6, // After TRANSFERRED_TO_CFS
       "Customs Clearance": 8, // After CUSTOM_RELEASED
-      Delivery: 13, // After EMPTY_RETURNED
+      Delivery: 16, // After EMPTY_RETURNED
     }
 
     return statusOrder[status] >= checkpointOrder[checkpointName]
@@ -124,18 +128,22 @@ export default function TrackingPage() {
   const getProgressPercentage = (status: ShipmentStatus) => {
     const statusPercentage: Record<ShipmentStatus, number> = {
       [ShipmentStatus.CREATED]: 5,
-      [ShipmentStatus.DOCUMENT_RECEIVED]: 15,
-      [ShipmentStatus.DOCUMENTS_SENT]: 25,
-      [ShipmentStatus.IN_TRANSIT]: 35,
-      [ShipmentStatus.CARGO_ARRIVED]: 45,
-      [ShipmentStatus.TRANSFERRED_TO_CFS]: 55,
-      [ShipmentStatus.ENTRY_REGISTERED]: 65,
-      [ShipmentStatus.CUSTOM_RELEASED]: 75, // Renamed from CLEARED
-      [ShipmentStatus.DELIVERY_ORDER_OBTAINED]: 80,
-      [ShipmentStatus.TAXES_PAID]: 85,
-      [ShipmentStatus.NIMULE_BORDER_RELEASED]: 90,
+      [ShipmentStatus.DOCUMENT_RECEIVED]: 10,
+      [ShipmentStatus.DOCUMENTS_SENT]: 15,
+      [ShipmentStatus.IN_TRANSIT]: 25,
+      [ShipmentStatus.CARGO_ARRIVED]: 35,
+      [ShipmentStatus.TRANSFERRED_TO_CFS]: 45,
+      [ShipmentStatus.ENTRY_REGISTERED]: 55,
+      [ShipmentStatus.CUSTOM_RELEASED]: 65,
+      [ShipmentStatus.DELIVERY_ORDER_OBTAINED]: 70,
+      [ShipmentStatus.TAXES_PAID]: 75,
+      [ShipmentStatus.ARRIVAL_MALABA]: 80,
+      [ShipmentStatus.DEPARTURE_MALABA]: 85,
+      [ShipmentStatus.ARRIVAL_NIMULE]: 90,
+      [ShipmentStatus.NIMULE_BORDER_RELEASED]: 92,
       [ShipmentStatus.DELIVERED]: 95,
-      [ShipmentStatus.EMPTY_RETURNED]: 100, // Renamed from COMPLETED
+      [ShipmentStatus.EMPTY_RETURNED]: 100,
+      [ShipmentStatus.UPDATED]: 50, // Generic update status - mid-point
       [ShipmentStatus.DOCUMENT_REJECTED]: 0, // Special case
     }
 

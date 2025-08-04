@@ -2,27 +2,29 @@ import { Shipment } from "@prisma/client"
 import { CheckCircle, Circle } from "lucide-react"
 import type React from "react"
 
-
-
 interface ShipmentProgressProps {
   shipment: Shipment
 }
 
-// Update the ShipmentStatus enum to match the schema
+// Update the ShipmentStatus enum to match the complete schema
 enum ShipmentStatus {
   CREATED = "CREATED",
+  UPDATED = "UPDATED",
   DOCUMENT_RECEIVED = "DOCUMENT_RECEIVED",
   DOCUMENTS_SENT = "DOCUMENTS_SENT",
   CARGO_ARRIVED = "CARGO_ARRIVED",
-  TRANSFERRED_TO_CFS = "TRANSFERRED_TO_CFS", // Replaces DELIVERY_CONFIRMED
+  TRANSFERRED_TO_CFS = "TRANSFERRED_TO_CFS",
   ENTRY_REGISTERED = "ENTRY_REGISTERED",
-  CUSTOM_RELEASED = "CUSTOM_RELEASED", // Replaces CLEARED
+  CUSTOM_RELEASED = "CUSTOM_RELEASED",
   DELIVERY_ORDER_OBTAINED = "DELIVERY_ORDER_OBTAINED",
   TAXES_PAID = "TAXES_PAID",
+  ARRIVAL_MALABA = "ARRIVAL_MALABA",
+  DEPARTURE_MALABA = "DEPARTURE_MALABA",
+  ARRIVAL_NIMULE = "ARRIVAL_NIMULE",
   NIMULE_BORDER_RELEASED = "NIMULE_BORDER_RELEASED",
   IN_TRANSIT = "IN_TRANSIT",
   DELIVERED = "DELIVERED",
-  EMPTY_RETURNED = "EMPTY_RETURNED", // Replaces COMPLETED
+  EMPTY_RETURNED = "EMPTY_RETURNED",
   DOCUMENT_REJECTED = "DOCUMENT_REJECTED",
 }
 
@@ -41,14 +43,18 @@ const workflowSteps: {
   { status: ShipmentStatus.CUSTOM_RELEASED, label: "Customs Released" },
   { status: ShipmentStatus.DELIVERY_ORDER_OBTAINED, label: "Delivery Order Obtained" },
   { status: ShipmentStatus.TAXES_PAID, label: "Taxes Paid" },
+  { status: ShipmentStatus.ARRIVAL_MALABA, label: "Arrived at Malaba" },
+  { status: ShipmentStatus.DEPARTURE_MALABA, label: "Departed Malaba" },
+  { status: ShipmentStatus.ARRIVAL_NIMULE, label: "Arrived at Nimule" },
   { status: ShipmentStatus.NIMULE_BORDER_RELEASED, label: "Nimule Released" },
   { status: ShipmentStatus.DELIVERED, label: "Delivered" },
   { status: ShipmentStatus.EMPTY_RETURNED, label: "Empty Returned" },
 ]
 
-// Update statusRankMap to reflect the new enum and order
+// Update statusRankMap to include all statuses
 const statusRankMap: Record<ShipmentStatus, number> = {
   [ShipmentStatus.CREATED]: 0,
+  [ShipmentStatus.UPDATED]: 0, // Same rank as CREATED since it's an update operation
   [ShipmentStatus.DOCUMENT_RECEIVED]: 1,
   [ShipmentStatus.DOCUMENTS_SENT]: 2,
   [ShipmentStatus.IN_TRANSIT]: 3,
@@ -58,18 +64,21 @@ const statusRankMap: Record<ShipmentStatus, number> = {
   [ShipmentStatus.CUSTOM_RELEASED]: 7,
   [ShipmentStatus.DELIVERY_ORDER_OBTAINED]: 8,
   [ShipmentStatus.TAXES_PAID]: 9,
-  [ShipmentStatus.NIMULE_BORDER_RELEASED]: 10,
-  [ShipmentStatus.DELIVERED]: 11,
-  [ShipmentStatus.EMPTY_RETURNED]: 12,
+  [ShipmentStatus.ARRIVAL_MALABA]: 10,
+  [ShipmentStatus.DEPARTURE_MALABA]: 11,
+  [ShipmentStatus.ARRIVAL_NIMULE]: 12,
+  [ShipmentStatus.NIMULE_BORDER_RELEASED]: 13,
+  [ShipmentStatus.DELIVERED]: 14,
+  [ShipmentStatus.EMPTY_RETURNED]: 15,
   [ShipmentStatus.DOCUMENT_REJECTED]: 1, // Special case, treated as early stage for progress visualization
 }
 
 export const ShipmentProgress: React.FC<ShipmentProgressProps> = ({ shipment }) => {
-  const currentStatusRank = shipment.status in statusRankMap ? statusRankMap[shipment.status] : -1
+  const currentStatusRank = shipment.status in statusRankMap ? statusRankMap[shipment.status as ShipmentStatus] : -1
 
-  // Define key milestones for the progress bar, applicable to both types
-  // Indices correspond to the new workflowSteps array
-  const displayStepsIndices = [1, 4, 7, 11, 12] // Documents Received, Cargo Arrived, Customs Released, Delivered, Empty Returned
+  // Define key milestones for the progress bar
+  // Updated indices to reflect the new workflow order
+  const displayStepsIndices = [1, 4, 7, 14, 15] // Documents Received, Cargo Arrived, Customs Released, Delivered, Empty Returned
   const filteredSteps = displayStepsIndices.map((index) => workflowSteps[index])
 
   return (

@@ -27,18 +27,29 @@ export const ShipmentCard: React.FC<ShipmentCardProps> = ({ shipment }) => {
     }
   };
 
-  const copyToClipboard = () => {
-    if (shipment.trackingNumber) {
-      navigator.clipboard.writeText(shipment.trackingNumber)
-        .then(() => {
-          setCopied(true);
-          setTimeout(() => setCopied(false), 2000); // Reset after 2 seconds
-        })
-        .catch(err => {
-          console.error('Failed to copy: ', err);
-        });
+  // Get the appropriate document number based on shipment type
+  const getDocumentNumber = () => {
+    if (shipment.type === ShipmentType.SEA && shipment.billOfLadingNumber) {
+      return { label: 'B/L:', number: shipment.billOfLadingNumber };
     }
+    if (shipment.type === ShipmentType.AIR && shipment.airwayBillNumber) {
+      return { label: 'AWB:', number: shipment.airwayBillNumber };
+    }
+    return null;
   };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000); // Reset after 2 seconds
+      })
+      .catch(err => {
+        console.error('Failed to copy: ', err);
+      });
+  };
+
+  const documentNumber = getDocumentNumber();
 
   return (
     <Card className="hover:shadow-md transition-shadow duration-200">
@@ -61,7 +72,7 @@ export const ShipmentCard: React.FC<ShipmentCardProps> = ({ shipment }) => {
         {shipment.trackingNumber && (
           <div 
             className="flex items-center justify-between bg-blue-50 p-3 rounded-md mb-4 cursor-pointer hover:bg-blue-100 transition-colors"
-            onClick={copyToClipboard}
+            onClick={() => copyToClipboard(shipment.trackingNumber!)}
             title="Click to copy tracking number"
           >
             <div className="flex items-center flex-1 overflow-hidden">
@@ -69,6 +80,29 @@ export const ShipmentCard: React.FC<ShipmentCardProps> = ({ shipment }) => {
               <div className="mr-2 text-sm font-medium text-gray-700">Tracking:</div>
               <div className="text-sm font-mono text-blue-700 truncate">
                 {shipment.trackingNumber}
+              </div>
+            </div>
+            <div className="ml-2 p-1">
+              {copied ? (
+                <CheckCircle size={18} className="text-green-500" />
+              ) : (
+                <Clipboard size={18} className="text-gray-500" />
+              )}
+            </div>
+          </div>
+        )}
+
+        {documentNumber && (
+          <div 
+            className="flex items-center justify-between bg-green-50 p-3 rounded-md mb-4 cursor-pointer hover:bg-green-100 transition-colors"
+            onClick={() => copyToClipboard(documentNumber.number)}
+            title={`Click to copy ${documentNumber.label.toLowerCase()}`}
+          >
+            <div className="flex items-center flex-1 overflow-hidden">
+              <Clipboard size={16} className="mr-2 text-green-600 flex-shrink-0" />
+              <div className="mr-2 text-sm font-medium text-gray-700">{documentNumber.label}</div>
+              <div className="text-sm font-mono text-green-700 truncate">
+                {documentNumber.number}
               </div>
             </div>
             <div className="ml-2 p-1">

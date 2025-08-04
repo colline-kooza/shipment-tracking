@@ -1,6 +1,7 @@
 "use server";
 
 import { db } from "@/prisma/db";
+import { Resend } from "resend";
 import type {
   ShipmentStatus,
   ShipmentType,
@@ -9,6 +10,11 @@ import type {
   DocumentType,
   NotificationType,
 } from "@prisma/client";
+import { generatePDFReport } from "@/components/emails/pdf-report";
+import ReportEmailTemplate from "@/components/emails/report-email-template";
+
+// Initialize Resend
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Enhanced types for comprehensive reporting
 export type ReportType =
@@ -119,6 +125,34 @@ export type ApiResponse<T> = {
   error?: string;
 };
 
+export type EmailNotificationResult = {
+  success: boolean;
+  error?: string;
+};
+
+export type SendReportEmailData = {
+  recipientEmail: string;
+  reportData: ReportData;
+  reportType: ReportType;
+  filters: ReportFilters;
+  customerSpecific?: boolean;
+};
+
+// Helper function to generate PDF buffer
+async function generateReportPDF(
+  reportData: ReportData,
+  reportType: ReportType,
+  filters: ReportFilters
+): Promise<Buffer> {
+  try {
+    return await generatePDFReport({ reportData, reportType, filters });
+  } catch (error) {
+    console.error("Error generating PDF:", error);
+    throw new Error("Failed to generate PDF attachment");
+  }
+}
+
+// Generate report (optimized)
 export async function generateReport(
   filters: ReportFilters
 ): Promise<ApiResponse<ReportData>> {
@@ -126,7 +160,6 @@ export async function generateReport(
     const { type, dateRange, status, shipmentType, customerId, userId } =
       filters;
 
-    // Base query conditions
     const baseWhere = {
       ...(dateRange && {
         createdAt: {
@@ -134,14 +167,12 @@ export async function generateReport(
           lte: dateRange.to,
         },
       }),
-      ...(status && status.length > 0 && { status: { in: status } }),
-      ...(shipmentType &&
-        shipmentType.length > 0 && { type: { in: shipmentType } }),
+      ...(status?.length && { status: { in: status } }),
+      ...(shipmentType?.length && { type: { in: shipmentType } }),
       ...(customerId && { customerId }),
       ...(userId && { createdBy: userId }),
     };
 
-    // Get comprehensive summary data
     const [
       totalShipments,
       activeShipments,
@@ -154,6 +185,11 @@ export async function generateReport(
       shipmentsByType,
       documentsByStatus,
       documentsByType,
+      customerAnalytics,
+      timelineEvents,
+      notifications,
+      totalCompletedShipments,
+      totalVerifiedDocs,
     ] = await Promise.all([
       db.shipment.count({ where: baseWhere }),
       db.shipment.count({
@@ -169,178 +205,161 @@ export async function generateReport(
         },
       }),
       db.customer.count({
-        where: {
-          ...(dateRange && {
-            createdAt: {
-              gte: dateRange.from,
-              lte: dateRange.to,
-            },
-          }),
-        },
+        where: dateRange
+          ? { createdAt: { gte: dateRange.from, lte: dateRange.to } }
+          : {},
       }),
       db.document.count({
-        where: {
-          ...(dateRange && {
-            uploadedAt: {
-              gte: dateRange.from,
-              lte: dateRange.to,
-            },
-          }),
-        },
+        where: dateRange
+          ? { uploadedAt: { gte: dateRange.from, lte: dateRange.to } }
+          : {},
       }),
       db.document.count({
         where: {
           status: "PENDING",
           ...(dateRange && {
-            uploadedAt: {
-              gte: dateRange.from,
-              lte: dateRange.to,
-            },
+            uploadedAt: { gte: dateRange.from, lte: dateRange.to },
           }),
         },
       }),
       db.user.count({
-        where: {
-          ...(dateRange && {
-            createdAt: {
-              gte: dateRange.from,
-              lte: dateRange.to,
-            },
-          }),
-        },
+        where: dateRange
+          ? { createdAt: { gte: dateRange.from, lte: dateRange.to } }
+          : {},
       }),
-      // Shipments by status
       db.shipment.groupBy({
         by: ["status"],
         _count: { status: true },
         where: baseWhere,
       }),
-      // Shipments by type
       db.shipment.groupBy({
         by: ["type"],
         _count: { type: true },
         where: baseWhere,
       }),
-      // Documents by status
       db.document.groupBy({
         by: ["status"],
         _count: { status: true },
-        where: {
-          ...(dateRange && {
-            uploadedAt: {
-              gte: dateRange.from,
-              lte: dateRange.to,
-            },
-          }),
-        },
+        where: dateRange
+          ? { uploadedAt: { gte: dateRange.from, lte: dateRange.to } }
+          : {},
       }),
-      // Documents by type
       db.document.groupBy({
         by: ["type"],
         _count: { type: true },
-        where: {
-          ...(dateRange && {
-            uploadedAt: {
-              gte: dateRange.from,
-              lte: dateRange.to,
+        where: dateRange
+          ? { uploadedAt: { gte: dateRange.from, lte: dateRange.to } }
+          : {},
+      }),
+      db.customer.findMany({
+        where: dateRange
+          ? { createdAt: { gte: dateRange.from, lte: dateRange.to } }
+          : {},
+        select: {
+          id: true,
+          name: true,
+          shipments: {
+            where: baseWhere,
+            select: {
+              id: true,
+              status: true,
+              createdAt: true,
+              updatedAt: true,
+              documents: { select: { id: true } },
             },
+          },
+        },
+        take: 20,
+        orderBy: { shipments: { _count: "desc" } },
+      }),
+      db.timelineEvent.groupBy({
+        by: ["status"],
+        _count: { status: true },
+        where: dateRange
+          ? { timestamp: { gte: dateRange.from, lte: dateRange.to } }
+          : {},
+      }),
+      db.notification.groupBy({
+        by: ["type"],
+        _count: { type: true },
+        where: dateRange
+          ? { timestamp: { gte: dateRange.from, lte: dateRange.to } }
+          : {},
+      }),
+      db.shipment.findMany({
+        where: {
+          ...baseWhere,
+          status: { in: ["DELIVERED", "EMPTY_RETURNED"] },
+        },
+        select: {
+          createdAt: true,
+          updatedAt: true,
+          origin: true,
+          destination: true,
+        },
+      }),
+      db.document.count({
+        where: {
+          status: "VERIFIED",
+          ...(dateRange && {
+            uploadedAt: { gte: dateRange.from, lte: dateRange.to },
           }),
         },
       }),
     ]);
 
-    // Calculate percentages for distributions
     const statusData = shipmentsByStatus.map((item) => ({
       status: item.status,
       count: item._count.status,
-      percentage:
-        totalShipments > 0
-          ? Math.round((item._count.status / totalShipments) * 100)
-          : 0,
+      percentage: totalShipments
+        ? Math.round((item._count.status / totalShipments) * 100)
+        : 0,
     }));
 
     const typeData = shipmentsByType.map((item) => ({
       type: item.type,
       count: item._count.type,
-      percentage:
-        totalShipments > 0
-          ? Math.round((item._count.type / totalShipments) * 100)
-          : 0,
+      percentage: totalShipments
+        ? Math.round((item._count.type / totalShipments) * 100)
+        : 0,
     }));
 
     const docStatusData = documentsByStatus.map((item) => ({
       status: item.status,
       count: item._count.status,
-      percentage:
-        totalDocuments > 0
-          ? Math.round((item._count.status / totalDocuments) * 100)
-          : 0,
+      percentage: totalDocuments
+        ? Math.round((item._count.status / totalDocuments) * 100)
+        : 0,
     }));
 
     const docTypeData = documentsByType.map((item) => ({
       type: item.type,
       count: item._count.type,
-      percentage:
-        totalDocuments > 0
-          ? Math.round((item._count.type / totalDocuments) * 100)
-          : 0,
+      percentage: totalDocuments
+        ? Math.round((item._count.type / totalDocuments) * 100)
+        : 0,
     }));
-
-    // Get enhanced customer analytics
-    const customerAnalytics = await db.customer.findMany({
-      where: {
-        ...(dateRange && {
-          createdAt: {
-            gte: dateRange.from,
-            lte: dateRange.to,
-          },
-        }),
-      },
-      select: {
-        id: true,
-        name: true,
-        shipments: {
-          where: baseWhere,
-          select: {
-            id: true,
-            status: true,
-            createdAt: true,
-            updatedAt: true,
-            documents: {
-              select: {
-                id: true,
-              },
-            },
-          },
-        },
-      },
-      take: 20,
-      orderBy: {
-        shipments: {
-          _count: "desc",
-        },
-      },
-    });
 
     const customerData = customerAnalytics.map((customer) => {
       const completedShipments = customer.shipments.filter((s) =>
-        ["DELIVERED", "COMPLETED"].includes(s.status)
+        ["DELIVERED", "EMPTY_RETURNED"].includes(s.status)
       );
       const avgDeliveryTime =
         completedShipments.length > 0
-          ? completedShipments.reduce((sum, shipment) => {
-              const deliveryTime =
-                shipment.updatedAt.getTime() - shipment.createdAt.getTime();
-              return sum + deliveryTime / (1000 * 60 * 60 * 24); // Convert to days
-            }, 0) / completedShipments.length
+          ? completedShipments.reduce(
+              (sum, shipment) =>
+                sum +
+                (shipment.updatedAt.getTime() - shipment.createdAt.getTime()) /
+                  (1000 * 60 * 60 * 24),
+              0
+            ) / completedShipments.length
           : 0;
-
       return {
         customerId: customer.id,
         customerName: customer.name,
         totalShipments: customer.shipments.length,
         pendingShipments: customer.shipments.filter(
-          (s) => !["DELIVERED", "COMPLETED"].includes(s.status)
+          (s) => !["DELIVERED", "EMPTY_RETURNED"].includes(s.status)
         ).length,
         completedShipments: completedShipments.length,
         averageDeliveryTime: Math.round(avgDeliveryTime),
@@ -351,7 +370,6 @@ export async function generateReport(
       };
     });
 
-    // Get monthly trends (last 12 months)
     const last12Months = Array.from({ length: 12 }, (_, i) => {
       const date = new Date();
       date.setMonth(date.getMonth() - i);
@@ -372,128 +390,77 @@ export async function generateReport(
             db.shipment.count({
               where: {
                 ...baseWhere,
-                createdAt: {
-                  gte: month.start,
-                  lte: month.end,
-                },
+                createdAt: { gte: month.start, lte: month.end },
               },
             }),
             db.document.count({
-              where: {
-                uploadedAt: {
-                  gte: month.start,
-                  lte: month.end,
-                },
-              },
+              where: { uploadedAt: { gte: month.start, lte: month.end } },
             }),
             db.shipment.count({
               where: {
                 ...baseWhere,
-                createdAt: {
-                  gte: month.start,
-                  lte: month.end,
-                },
+                createdAt: { gte: month.start, lte: month.end },
                 status: { in: ["DELIVERED", "EMPTY_RETURNED"] },
               },
             }),
           ]);
-
         return {
           month: month.label,
           shipments: shipmentCount,
           documents: documentCount,
-          completionRate:
-            shipmentCount > 0
-              ? Math.round((completedCount / shipmentCount) * 100)
-              : 0,
+          completionRate: shipmentCount
+            ? Math.round((completedCount / shipmentCount) * 100)
+            : 0,
         };
       })
     );
 
-    // Get top routes with performance metrics - FIXED VERSION
-    const routeData = await db.shipment.groupBy({
-      by: ["origin", "destination"],
-      _count: { id: true },
-      where: {
-        ...baseWhere,
-        status: { in: ["DELIVERED", "EMPTY_RETURNED"] },
-      },
-      orderBy: {
-        _count: {
-          id: "desc",
-        },
-      },
-      take: 10,
-    });
-
-    // Get detailed shipment data for delivery time calculations
-    const completedShipmentsForRoutes = await db.shipment.findMany({
-      where: {
-        ...baseWhere,
-        status: { in: ["DELIVERED", "EMPTY_RETURNED"] },
-      },
-      select: {
-        origin: true,
-        destination: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
-
-    // Calculate average delivery times per route
     const routeDeliveryTimes = new Map<
       string,
       { totalTime: number; count: number }
     >();
-
-    completedShipmentsForRoutes.forEach((shipment) => {
+    totalCompletedShipments.forEach((shipment) => {
       const routeKey = `${shipment.origin} → ${shipment.destination}`;
       const deliveryTime =
-        shipment.updatedAt.getTime() - shipment.createdAt.getTime();
-      const deliveryDays = deliveryTime / (1000 * 60 * 60 * 24); // Convert to days
+        (shipment.updatedAt.getTime() - shipment.createdAt.getTime()) /
+        (1000 * 60 * 60 * 24);
+      const existing = routeDeliveryTimes.get(routeKey) || {
+        totalTime: 0,
+        count: 0,
+      };
+      routeDeliveryTimes.set(routeKey, {
+        totalTime: existing.totalTime + deliveryTime,
+        count: existing.count + 1,
+      });
+    });
 
-      if (routeDeliveryTimes.has(routeKey)) {
-        const existing = routeDeliveryTimes.get(routeKey)!;
-        routeDeliveryTimes.set(routeKey, {
-          totalTime: existing.totalTime + deliveryDays,
-          count: existing.count + 1,
-        });
-      } else {
-        routeDeliveryTimes.set(routeKey, {
-          totalTime: deliveryDays,
-          count: 1,
-        });
-      }
+    const routeData = await db.shipment.groupBy({
+      by: ["origin", "destination"],
+      _count: { id: true },
+      where: { ...baseWhere, status: { in: ["DELIVERED", "EMPTY_RETURNED"] } },
+      orderBy: { _count: { id: "desc" } },
+      take: 10,
     });
 
     const topRoutes = routeData.map((route) => {
       const routeKey = `${route.origin} → ${route.destination}`;
       const deliveryData = routeDeliveryTimes.get(routeKey);
-      const averageDeliveryTime = deliveryData
-        ? Math.round(deliveryData.totalTime / deliveryData.count)
-        : 0;
-
       return {
         route: routeKey,
         count: route._count.id,
-        percentage:
-          totalShipments > 0
-            ? Math.round((route._count.id / totalShipments) * 100)
-            : 0,
-        averageDeliveryTime,
+        percentage: totalShipments
+          ? Math.round((route._count.id / totalShipments) * 100)
+          : 0,
+        averageDeliveryTime: deliveryData
+          ? Math.round(deliveryData.totalTime / deliveryData.count)
+          : 0,
       };
     });
 
-    // Get user activity analytics
     const userActivity = await db.user.findMany({
-      where: {
-        ...(dateRange && {
-          createdAt: {
-            gte: dateRange.from,
-            lte: dateRange.to,
-          },
-        }),
-      },
+      where: dateRange
+        ? { createdAt: { gte: dateRange.from, lte: dateRange.to } }
+        : {},
       select: {
         id: true,
         name: true,
@@ -501,28 +468,17 @@ export async function generateReport(
         updatedAt: true,
         _count: {
           select: {
-            shipments: {
-              where: baseWhere,
-            },
+            shipments: { where: baseWhere },
             documents: {
-              where: {
-                ...(dateRange && {
-                  uploadedAt: {
-                    gte: dateRange.from,
-                    lte: dateRange.to,
-                  },
-                }),
-              },
+              where: dateRange
+                ? { uploadedAt: { gte: dateRange.from, lte: dateRange.to } }
+                : {},
             },
           },
         },
       },
       take: 15,
-      orderBy: {
-        shipments: {
-          _count: "desc",
-        },
-      },
+      orderBy: { shipments: { _count: "desc" } },
     });
 
     const userData = userActivity.map((user) => ({
@@ -534,39 +490,11 @@ export async function generateReport(
       lastActivity: user.updatedAt,
     }));
 
-    // Get timeline analytics
-    const timelineEvents = await db.timelineEvent.groupBy({
-      by: ["status"],
-      _count: { status: true },
-      where: {
-        ...(dateRange && {
-          timestamp: {
-            gte: dateRange.from,
-            lte: dateRange.to,
-          },
-        }),
-      },
-    });
-
     const timelineAnalytics = timelineEvents.map((event) => ({
       status: event.status,
-      averageTimeInStatus: 0, // Calculate based on your timeline logic
+      averageTimeInStatus: 0, // Placeholder for timeline logic
       totalTransitions: event._count.status,
     }));
-
-    // Get notification analytics
-    const notifications = await db.notification.groupBy({
-      by: ["type"],
-      _count: { type: true },
-      where: {
-        ...(dateRange && {
-          timestamp: {
-            gte: dateRange.from,
-            lte: dateRange.to,
-          },
-        }),
-      },
-    });
 
     const totalNotifications = notifications.reduce(
       (sum, n) => sum + n._count.type,
@@ -575,62 +503,30 @@ export async function generateReport(
     const notificationData = notifications.map((notification) => ({
       type: notification.type,
       count: notification._count.type,
-      percentage:
-        totalNotifications > 0
-          ? Math.round((notification._count.type / totalNotifications) * 100)
-          : 0,
+      percentage: totalNotifications
+        ? Math.round((notification._count.type / totalNotifications) * 100)
+        : 0,
     }));
 
-    // Calculate performance metrics - ENHANCED VERSION
-    const totalCompletedShipments = await db.shipment.findMany({
-      where: {
-        ...baseWhere,
-        status: { in: ["DELIVERED", "EMPTY_RETURNED"] },
-      },
-      select: {
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
-
     const totalDeliveryTime = totalCompletedShipments.reduce(
-      (sum, shipment) => {
-        const deliveryTime =
-          shipment.updatedAt.getTime() - shipment.createdAt.getTime();
-        return sum + deliveryTime / (1000 * 60 * 60 * 24); // Convert to days
-      },
+      (sum, shipment) =>
+        sum +
+        (shipment.updatedAt.getTime() - shipment.createdAt.getTime()) /
+          (1000 * 60 * 60 * 24),
       0
     );
 
-    const averageDeliveryTime =
-      totalCompletedShipments.length > 0
-        ? Math.round(totalDeliveryTime / totalCompletedShipments.length)
-        : 0;
-
-    // Get document approval statistics
-    const totalVerifiedDocs = await db.document.count({
-      where: {
-        status: "VERIFIED",
-        ...(dateRange && {
-          uploadedAt: {
-            gte: dateRange.from,
-            lte: dateRange.to,
-          },
-        }),
-      },
-    });
-
     const performanceMetrics = {
-      averageDeliveryTime,
-      onTimeDeliveryRate:
-        completedShipments > 0
-          ? Math.round((completedShipments / totalShipments) * 100)
-          : 0,
-      documentApprovalRate:
-        totalDocuments > 0
-          ? Math.round((totalVerifiedDocs / totalDocuments) * 100)
-          : 0,
-      customerSatisfactionScore: 85, // This would come from customer feedback system
+      averageDeliveryTime: totalCompletedShipments.length
+        ? Math.round(totalDeliveryTime / totalCompletedShipments.length)
+        : 0,
+      onTimeDeliveryRate: totalShipments
+        ? Math.round((completedShipments / totalShipments) * 100)
+        : 0,
+      documentApprovalRate: totalDocuments
+        ? Math.round((totalVerifiedDocs / totalDocuments) * 100)
+        : 0,
+      customerSatisfactionScore: 85, // Placeholder for feedback system
     };
 
     const reportData: ReportData = {
@@ -639,7 +535,7 @@ export async function generateReport(
         totalCustomers,
         totalDocuments,
         totalUsers,
-        totalRevenue: 0, // Calculate based on your revenue logic
+        totalRevenue: 0, // Placeholder for revenue logic
         activeShipments,
         completedShipments,
         pendingDocuments,
@@ -657,10 +553,7 @@ export async function generateReport(
       notifications: notificationData,
     };
 
-    return {
-      success: true,
-      data: reportData,
-    };
+    return { success: true, data: reportData };
   } catch (error) {
     console.error("Error generating report:", error);
     return {
@@ -671,6 +564,7 @@ export async function generateReport(
   }
 }
 
+// Get report metadata
 export async function getReportMetadata(): Promise<
   ApiResponse<{
     customers: Array<{ id: string; name: string }>;
@@ -691,13 +585,7 @@ export async function getReportMetadata(): Promise<
       }),
     ]);
 
-    return {
-      success: true,
-      data: {
-        customers,
-        users,
-      },
-    };
+    return { success: true, data: { customers, users } };
   } catch (error) {
     console.error("Error fetching report metadata:", error);
     return {
@@ -706,6 +594,96 @@ export async function getReportMetadata(): Promise<
         error instanceof Error
           ? error.message
           : "Failed to fetch report metadata",
+    };
+  }
+}
+
+// Get customers for email selection
+export async function getCustomersForEmail(): Promise<
+  ApiResponse<Array<{ id: string; name: string; email: string | null }>>
+> {
+  try {
+    const customers = await db.customer.findMany({
+      select: { id: true, name: true, email: true },
+      where: { isActive: true, email: { not: null } },
+      orderBy: { name: "asc" },
+    });
+
+    return { success: true, data: customers };
+  } catch (error) {
+    console.error("Error fetching customers for email:", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch customers for email",
+    };
+  }
+}
+
+// Send report email with PDF attachment
+export async function sendReportEmail({
+  recipientEmail,
+  reportData,
+  reportType,
+  filters,
+  customerSpecific = false,
+}: SendReportEmailData): Promise<ApiResponse<{ messageId: string }>> {
+  try {
+    if (!process.env.RESEND_API_KEY) {
+      console.warn("RESEND_API_KEY not configured");
+      return { success: false, error: "Email service not configured" };
+    }
+
+    const pdfBuffer = await generateReportPDF(reportData, reportType, filters);
+    const reportTypeName =
+      {
+        SHIPMENTS_SUMMARY: "Shipments Summary",
+        DOCUMENT_STATUS: "Document Status",
+        CUSTOMER_ANALYTICS: "Customer Analytics",
+        REVENUE_ANALYSIS: "Revenue Analysis",
+        USER_ACTIVITY: "User Activity",
+        TIMELINE_ANALYTICS: "Timeline Analytics",
+        ROUTE_ANALYTICS: "Route Analytics",
+        PERFORMANCE_METRICS: "Performance Metrics",
+      }[reportType] || "Report";
+
+    const subject = customerSpecific
+      ? `Your ${reportTypeName} Report`
+      : `${reportTypeName} Report - ${new Date().toLocaleDateString()}`;
+
+    const response = await resend.emails.send({
+      from: "Reports <reports@lubegajovan.com>",
+      to: [recipientEmail],
+      subject,
+      react: ReportEmailTemplate({
+        reportType: reportTypeName,
+        generatedAt: new Date(),
+        filters,
+        summary: reportData.summary,
+      }),
+      attachments: [
+        {
+          filename: `${reportType.toLowerCase()}_report_${
+            new Date().toISOString().split("T")[0]
+          }.pdf`,
+          content: pdfBuffer,
+        },
+      ],
+    });
+
+    if (!response.data?.id) {
+      throw new Error("Failed to send email - no response from service");
+    }
+
+    return { success: true, data: { messageId: response.data.id } };
+  } catch (error) {
+    console.error("Failed to send report email:", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : "Failed to send report email",
     };
   }
 }

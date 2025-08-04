@@ -1,4 +1,4 @@
-import { ShipmentDetail } from '@/components/Shipments/detailed-component';
+import ShipmentDetail from '@/components/Shipments/detailed-component';
 import React from 'react';
 
 interface ShipmentEditPageProps {

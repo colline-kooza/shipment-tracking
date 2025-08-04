@@ -46,11 +46,11 @@ import { DocumentUploadForm } from "./DocumentUploadForm"
 import ExportDialog from "../dashboard/export-dialog"
 import FileUploader from "../docs/FileUploader"
 import { DatePicker } from "../ui/date-picker"
+import { getRequiredDocumentTypes } from "@/components/docs/DocumentTypeSelector" // Import the helper function
 
 interface ShipmentDetailProps {
   id: string
 }
-
 interface DocumentUpload {
   type: DocumentType
   file: {
@@ -58,7 +58,6 @@ interface DocumentUpload {
     name: string
   }
 }
-
 // Define props for FileUploader for clarity
 interface FileUploaderProps {
   endpoint: string
@@ -68,8 +67,7 @@ interface FileUploaderProps {
   label: string
   description: string
 }
-
-export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
+const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
   const router = useRouter()
   // State variables
   const [activeTab, setActiveTab] = useState<"overview" | "documents" | "timeline">("overview")
@@ -81,14 +79,12 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
   const [selectedStatus, setSelectedStatus] = useState<ShipmentStatus>(ShipmentStatus.CREATED) // Initialize with a default enum value
   const [statusNotes, setStatusNotes] = useState("")
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false)
-
   // New state for status update dialog
   const [statusUpdateDate, setStatusUpdateDate] = useState<Date | undefined>(undefined)
   // Change type to match FileUploader's output
   const [statusUpdateFile, setStatusUpdateFile] = useState<{ url: string; name: string } | null>(null)
   const [statusUpdateFileType, setStatusUpdateFileType] = useState<DocumentType | "">("")
   const [fileUploaded, setFileUploaded] = useState(false) // State to indicate if file is uploaded
-
   // Upload state (for the main document upload dialog)
   const [uploadData, setUploadData] = useState<DocumentUpload>({
     type: DocumentType.COMMERCIAL_INVOICE,
@@ -97,24 +93,20 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
       name: "",
     },
   })
-
   // Fetch shipment data using React Query
   const { data: shipmentResponse, isLoading, error } = useShipmentById(id)
   const updateStatusMutation = useUpdateShipmentStatus()
   const createDocumentMutation = useCreateDocument()
   const updateDocumentStatusMutation = useUpdateDocumentStatus()
   const deleteShipmentMutation = useDeleteShipment()
-
   // Extract shipment from response
   const shipment = shipmentResponse?.success ? shipmentResponse.data : null
-
   // Set initial status when shipment data loads
   useEffect(() => {
     if (shipment?.status) {
       setSelectedStatus(shipment.status)
     }
   }, [shipment])
-
   // Handle status update
   const handleStatusUpdate = async () => {
     if (!selectedStatus) return
@@ -134,7 +126,6 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
           type: statusUpdateFileType as DocumentType,
         }
       }
-
       await updateStatusMutation.mutateAsync({
         id,
         status: selectedStatus,
@@ -156,12 +147,10 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
       })
     }
   }
-
   // Handle edit shipment
   const handleEditShipment = () => {
     router.push(`/dashboard/shipments-trakit/edit/${id}`)
   }
-
   // Handle delete shipment
   const handleDeleteShipment = async () => {
     deleteShipmentMutation.mutate(id, {
@@ -177,13 +166,11 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
       },
     })
   }
-
   // Handle view document
   const handleViewDocument = (document: any) => {
     setSelectedDocument(document)
     setIsViewDocumentDialogOpen(true)
   }
-
   // Handle document verification
   const handleVerifyDocument = async (documentId: string) => {
     updateDocumentStatusMutation.mutate({
@@ -191,7 +178,6 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
       status: DocumentStatus.VERIFIED,
     })
   }
-
   // Handle document rejection
   const handleRejectDocument = async (documentId: string) => {
     updateDocumentStatusMutation.mutate({
@@ -199,7 +185,6 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
       status: DocumentStatus.REJECTED,
     })
   }
-
   // Handle upload document (for the main document upload dialog)
   const handleUploadDocument = async () => {
     createDocumentMutation.mutate(
@@ -220,7 +205,6 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
       },
     )
   }
-
   // If loading, show skeleton
   if (isLoading) {
     return (
@@ -246,7 +230,6 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
       </div>
     )
   }
-
   // If error, show error message
   if (error || !shipment) {
     return (
@@ -276,31 +259,19 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
       </div>
     )
   }
-
   // Extract timeline events
   const timelineEvents = shipment.timeline || []
   // Extract checkpoints
   const checkpoints = shipment.checkpoints || []
-
-  // Document completion stats
-  const requiredDocTypes = [
-    DocumentType.COMMERCIAL_INVOICE,
-    DocumentType.PACKING_LIST,
-    shipment.type === "SEA" ? DocumentType.BILL_OF_LADING : DocumentType.AIRWAY_BILL,
-    DocumentType.IMPORT_LICENCE,
-    DocumentType.CERTIFICATE_OF_CONFORMITY,
-    DocumentType.TAX_EXEMPTION,
-    DocumentType.CERTIFICATE_OF_ORIGIN,
-  ]
+  // Document completion stats - UPDATED to use getRequiredDocumentTypes
+  const requiredDocTypes = getRequiredDocumentTypes(shipment.type)
   const totalRequiredDocs = requiredDocTypes.length
   const completedDocs = shipment.documents.filter((doc) => doc.status === DocumentStatus.VERIFIED).length
   const completionPercentage = Math.round((completedDocs / totalRequiredDocs) * 100)
-
   // Find the latest status update event with a date or attached file
   const latestStatusUpdateEvent = shipment.timeline
     .filter((event) => event.timestamp || event.fileUrl)
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0]
-
   return (
     <div className="min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-3 py-8">
@@ -463,8 +434,19 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
                             Air Way Bill
                           </h4>
                           <div className="flex items-center">
-                            <User className="w-5 h-5 text-blue-600 mr-2" />
+                            <FileText className="w-5 h-5 text-blue-600 mr-2" /> {/* Changed icon to FileText */}
                             <span className="text-sm font-semibold text-blue-900">{shipment.airwayBillNumber}</span>
+                          </div>
+                        </div>
+                      )}
+                      {shipment.billOfLadingNumber && (
+                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                          <h4 className="text-xs font-medium text-blue-700 uppercase tracking-wide mb-2">
+                            Bill of Lading
+                          </h4>
+                          <div className="flex items-center">
+                            <FileText className="w-5 h-5 text-blue-600 mr-2" />
+                            <span className="text-sm font-semibold text-blue-900">{shipment.billOfLadingNumber}</span>
                           </div>
                         </div>
                       )}
@@ -829,7 +811,7 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
             <div className="grid gap-2">
               <label htmlFor="document-type" className="text-sm font-medium">
                 Attached Supporting Document Type (Optional) <br />
-                  <span className="text-xs text-orange-600">* Make sure you first upload the doc *</span>
+                <span className="text-xs text-orange-600">* Make sure you first upload the doc *</span>
               </label>
               <Select
                 value={statusUpdateFileType}
@@ -983,3 +965,5 @@ export const ShipmentDetail: React.FC<ShipmentDetailProps> = ({ id }) => {
     </div>
   )
 }
+
+export default ShipmentDetail

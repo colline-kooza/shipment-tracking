@@ -13,7 +13,6 @@ import {
 export type DocumentType =
   | "COMMERCIAL_INVOICE"
   | "PACKING_LIST"
-  | "BILL_OF_LADING"
   | "AIRWAY_BILL"
   | "IMPORT_LICENCE"
   | "CERTIFICATE_OF_CONFORMITY"
@@ -32,7 +31,6 @@ interface DocumentTypeSelectorProps {
 export const documentLabels: Record<DocumentType, string> = {
   COMMERCIAL_INVOICE: "Commercial Invoice",
   PACKING_LIST: "Packing List",
-  BILL_OF_LADING: "Bill of Lading",
   AIRWAY_BILL: "Airway Bill",
   IMPORT_LICENCE: "Import License",
   CERTIFICATE_OF_CONFORMITY: "Certificate of Conformity",
@@ -45,7 +43,6 @@ export const documentLabels: Record<DocumentType, string> = {
 export const documentDescriptions: Record<DocumentType, string> = {
   COMMERCIAL_INVOICE: "Bill for the goods from the seller to the buyer",
   PACKING_LIST: "Detailed list of items in the shipment",
-  BILL_OF_LADING: "Receipt of goods and contract of carriage",
   AIRWAY_BILL: "Air transport document for international shipments",
   IMPORT_LICENCE: "Authorization to import restricted goods",
   CERTIFICATE_OF_CONFORMITY: "Confirms products meet quality standards",
@@ -70,7 +67,6 @@ export const getRequiredDocumentTypes = (
 
   switch (shipmentType) {
     case "SEA":
-      return [...baseDocuments, "BILL_OF_LADING"];
     case "AIR":
       return [...baseDocuments, "AIRWAY_BILL"];
     case "ROAD":

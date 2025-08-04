@@ -1,26 +1,21 @@
 import {
   createShipment,
-  CreateShipmentDTO,
+  type CreateShipmentDTO,
   deleteShipment,
   getShipmentById,
   getShipments,
-  ShipmentFilters,
+  type ShipmentFilters,
   updateShipment,
-  UpdateShipmentDTO,
+  type UpdateShipmentDTO,
   updateShipmentStatus,
 } from "@/actions/trakit-shipments";
-import { getAuthUser } from "@/config/useAuth";
-import { db } from "@/prisma/db";
-import { ShipmentType } from "@/types/shipments";
-import { $Enums, ShipmentStatus } from "@prisma/client";
+import type { $Enums, ShipmentStatus } from "@prisma/client";
 import {
   useQuery,
   useSuspenseQuery,
   useMutation,
   useQueryClient,
-  useInfiniteQuery,
 } from "@tanstack/react-query";
-import { revalidatePath } from "next/cache";
 import { toast } from "sonner";
 
 // Query keys for caching
@@ -65,7 +60,6 @@ export function useShipmentById(id: string) {
  */
 export function useCreateShipment() {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: (data: CreateShipmentDTO) => createShipment(data),
     onSuccess: (response) => {
@@ -93,7 +87,6 @@ export function useCreateShipment() {
  * Hook for updating shipment status
  */
 export type DocumentType2 = $Enums.DocumentType;
-
 export function useUpdateShipmentStatus() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -135,10 +128,10 @@ export function useUpdateShipmentStatus() {
     },
   });
 }
+
 // Add this to your existing hooks
 export function useDeleteShipment() {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: (id: string) => deleteShipment(id),
     onSuccess: () => {
@@ -151,7 +144,6 @@ export function useDeleteShipment() {
 // Add this to your existing hooks
 export function useUpdateShipment() {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateShipmentDTO }) =>
       updateShipment(id, data),

@@ -17,6 +17,7 @@ import {
   Anchor,
   Info,
   FileText,
+  Plane,
 } from "lucide-react"
 import { format } from "date-fns"
 import { ShipmentStatus } from "@prisma/client"
@@ -120,22 +121,27 @@ export default function SeaFreightPage() {
 
   // Render functions for different components
   const renderStatusBadge = (status: ShipmentStatus) => {
-    const statusMap: Record<ShipmentStatus, { icon: React.ReactNode; label: string }> = {
-      [ShipmentStatus.CREATED]: { icon: <Clock size={14} />, label: "Created" },
-      [ShipmentStatus.DOCUMENT_RECEIVED]: { icon: <Clock size={14} />, label: "Docs Received" },
-      [ShipmentStatus.DOCUMENTS_SENT]: { icon: <Clock size={14} />, label: "Docs Sent" },
-      [ShipmentStatus.IN_TRANSIT]: { icon: <Ship size={14} />, label: "In Transit" },
-      [ShipmentStatus.CARGO_ARRIVED]: { icon: <Anchor size={14} />, label: "Cargo Arrived" },
-      [ShipmentStatus.TRANSFERRED_TO_CFS]: { icon: <Package size={14} />, label: "Transferred to CFS" },
-      [ShipmentStatus.ENTRY_REGISTERED]: { icon: <Package size={14} />, label: "Entry Registered" },
-      [ShipmentStatus.CUSTOM_RELEASED]: { icon: <CheckCircle2 size={14} />, label: "Customs Released" }, // Renamed
-      [ShipmentStatus.DELIVERY_ORDER_OBTAINED]: { icon: <FileText size={14} />, label: "DO Obtained" },
-      [ShipmentStatus.TAXES_PAID]: { icon: <Info size={14} />, label: "Taxes Paid" },
-      [ShipmentStatus.NIMULE_BORDER_RELEASED]: { icon: <CheckCircle2 size={14} />, label: "Nimule Released" },
-      [ShipmentStatus.DELIVERED]: { icon: <CheckCircle2 size={14} />, label: "Delivered" },
-      [ShipmentStatus.EMPTY_RETURNED]: { icon: <CheckCircle2 size={14} />, label: "Empty Returned" }, // Renamed
-      [ShipmentStatus.DOCUMENT_REJECTED]: { icon: <XCircle size={14} />, label: "Doc Rejected" },
-    }
+   // Updated statusMap with all missing ShipmentStatus values
+const statusMap: Record<ShipmentStatus, { icon: React.ReactNode; label: string }> = {
+  [ShipmentStatus.CREATED]: { icon: <Clock size={14} />, label: "Created" },
+  [ShipmentStatus.UPDATED]: { icon: <RefreshCw size={14} />, label: "Updated" },
+  [ShipmentStatus.DOCUMENT_RECEIVED]: { icon: <Clock size={14} />, label: "Docs Received" },
+  [ShipmentStatus.DOCUMENTS_SENT]: { icon: <Clock size={14} />, label: "Docs Sent" },
+  [ShipmentStatus.IN_TRANSIT]: { icon: <Plane size={14} />, label: "In Transit" },
+  [ShipmentStatus.CARGO_ARRIVED]: { icon: <Plane size={14} />, label: "Cargo Arrived" },
+  [ShipmentStatus.TRANSFERRED_TO_CFS]: { icon: <Package size={14} />, label: "Transferred to CFS" },
+  [ShipmentStatus.ENTRY_REGISTERED]: { icon: <Package size={14} />, label: "Entry Registered" },
+  [ShipmentStatus.CUSTOM_RELEASED]: { icon: <CheckCircle2 size={14} />, label: "Customs Released" },
+  [ShipmentStatus.DELIVERY_ORDER_OBTAINED]: { icon: <FileText size={14} />, label: "DO Obtained" },
+  [ShipmentStatus.TAXES_PAID]: { icon: <Info size={14} />, label: "Taxes Paid" },
+  [ShipmentStatus.ARRIVAL_MALABA]: { icon: <Plane size={14} />, label: "Arrived Malaba" },
+  [ShipmentStatus.DEPARTURE_MALABA]: { icon: <ArrowRight size={14} />, label: "Departed Malaba" },
+  [ShipmentStatus.ARRIVAL_NIMULE]: { icon: <Plane size={14} />, label: "Arrived Nimule" },
+  [ShipmentStatus.NIMULE_BORDER_RELEASED]: { icon: <CheckCircle2 size={14} />, label: "Nimule Released" },
+  [ShipmentStatus.DELIVERED]: { icon: <CheckCircle2 size={14} />, label: "Delivered" },
+  [ShipmentStatus.EMPTY_RETURNED]: { icon: <CheckCircle2 size={14} />, label: "Empty Returned" },
+  [ShipmentStatus.DOCUMENT_REJECTED]: { icon: <XCircle size={14} />, label: "Doc Rejected" },
+}
     const statusInfo = statusMap[status] || { icon: <Clock size={14} />, label: status }
     return (
       <Badge className={`flex items-center gap-1 ${getStatusClass(status)}`}>

@@ -134,8 +134,9 @@ export function getStatusLabel(status: ShipmentStatus): string {
 
 // Helper function to get status color
 export function getStatusColor(status: ShipmentStatus): string {
-  const statusMap: Record<ShipmentStatus, string> = {
+  const statusMapBg: Record<ShipmentStatus, string> = {
     [ShipmentStatus.CREATED]: "bg-gray-500", // Neutral for initial state
+    [ShipmentStatus.UPDATED]: "bg-gray-600", // Slightly darker gray for updates
     [ShipmentStatus.DOCUMENT_RECEIVED]: "bg-blue-500",
     [ShipmentStatus.DOCUMENTS_SENT]: "bg-indigo-500",
     [ShipmentStatus.IN_TRANSIT]: "bg-amber-500",
@@ -145,31 +146,38 @@ export function getStatusColor(status: ShipmentStatus): string {
     [ShipmentStatus.CUSTOM_RELEASED]: "bg-green-500",
     [ShipmentStatus.DELIVERY_ORDER_OBTAINED]: "bg-lime-500",
     [ShipmentStatus.TAXES_PAID]: "bg-orange-500",
+    [ShipmentStatus.ARRIVAL_MALABA]: "bg-yellow-500", // Border crossing colors
+    [ShipmentStatus.DEPARTURE_MALABA]: "bg-yellow-600",
+    [ShipmentStatus.ARRIVAL_NIMULE]: "bg-pink-500",
     [ShipmentStatus.NIMULE_BORDER_RELEASED]: "bg-emerald-500",
     [ShipmentStatus.DELIVERED]: "bg-green-600",
     [ShipmentStatus.EMPTY_RETURNED]: "bg-green-700", // Darker green for final completion
     [ShipmentStatus.DOCUMENT_REJECTED]: "bg-red-500",
   };
-  return statusMap[status] || "bg-gray-500";
+  return statusMapBg[status] || "bg-gray-500";
 }
 
 // Helper function to get status badge color
 export function getStatusBadgeColor(status: ShipmentStatus): string {
-  const statusMap: Record<ShipmentStatus, string> = {
-    [ShipmentStatus.CREATED]: "bg-gray-100 text-gray-800",
-    [ShipmentStatus.DOCUMENT_RECEIVED]: "bg-blue-100 text-blue-800",
-    [ShipmentStatus.DOCUMENTS_SENT]: "bg-indigo-100 text-indigo-800",
-    [ShipmentStatus.IN_TRANSIT]: "bg-amber-100 text-amber-800",
-    [ShipmentStatus.CARGO_ARRIVED]: "bg-purple-100 text-purple-800",
-    [ShipmentStatus.TRANSFERRED_TO_CFS]: "bg-cyan-100 text-cyan-800",
-    [ShipmentStatus.ENTRY_REGISTERED]: "bg-teal-100 text-teal-800",
-    [ShipmentStatus.CUSTOM_RELEASED]: "bg-green-100 text-green-800",
-    [ShipmentStatus.DELIVERY_ORDER_OBTAINED]: "bg-lime-100 text-lime-800",
-    [ShipmentStatus.TAXES_PAID]: "bg-orange-100 text-orange-800",
-    [ShipmentStatus.NIMULE_BORDER_RELEASED]: "bg-emerald-100 text-emerald-800",
-    [ShipmentStatus.DELIVERED]: "bg-green-200 text-green-900",
-    [ShipmentStatus.EMPTY_RETURNED]: "bg-green-300 text-green-900", // Darker badge for final completion
-    [ShipmentStatus.DOCUMENT_REJECTED]: "bg-red-100 text-red-800",
+  const statusMapBg: Record<ShipmentStatus, string> = {
+    [ShipmentStatus.CREATED]: "bg-gray-500", // Neutral for initial state
+    [ShipmentStatus.UPDATED]: "bg-gray-600", // Slightly darker gray for updates
+    [ShipmentStatus.DOCUMENT_RECEIVED]: "bg-blue-500",
+    [ShipmentStatus.DOCUMENTS_SENT]: "bg-indigo-500",
+    [ShipmentStatus.IN_TRANSIT]: "bg-amber-500",
+    [ShipmentStatus.CARGO_ARRIVED]: "bg-purple-500",
+    [ShipmentStatus.TRANSFERRED_TO_CFS]: "bg-cyan-500",
+    [ShipmentStatus.ENTRY_REGISTERED]: "bg-teal-500",
+    [ShipmentStatus.CUSTOM_RELEASED]: "bg-green-500",
+    [ShipmentStatus.DELIVERY_ORDER_OBTAINED]: "bg-lime-500",
+    [ShipmentStatus.TAXES_PAID]: "bg-orange-500",
+    [ShipmentStatus.ARRIVAL_MALABA]: "bg-yellow-500", // Border crossing colors
+    [ShipmentStatus.DEPARTURE_MALABA]: "bg-yellow-600",
+    [ShipmentStatus.ARRIVAL_NIMULE]: "bg-pink-500",
+    [ShipmentStatus.NIMULE_BORDER_RELEASED]: "bg-emerald-500",
+    [ShipmentStatus.DELIVERED]: "bg-green-600",
+    [ShipmentStatus.EMPTY_RETURNED]: "bg-green-700", // Darker green for final completion
+    [ShipmentStatus.DOCUMENT_REJECTED]: "bg-red-500",
   };
-  return statusMap[status] || "bg-gray-100 text-gray-800";
+  return statusMapBg[status] || "bg-gray-100 text-gray-800";
 }
