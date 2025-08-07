@@ -194,6 +194,9 @@ enum ShipmentStatus {
   ARRIVAL_MALABA
   DEPARTURE_MALABA
   ARRIVAL_NIMULE
+  ARRIVAL_MOMBASA // New status for specific arrival point
+  TRUCK_ALLOCATED // New status for truck allocation
+  PORT_DEPARTURE // New status for port departure
 }
 
 enum InvoiceStatus {

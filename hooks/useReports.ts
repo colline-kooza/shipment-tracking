@@ -26,7 +26,6 @@ export const reportKeys = {
         }
         return result;
       }, {} as Record<string, unknown>);
-
     return [...reportKeys.reports(), sortedFilters] as const;
   },
 };
@@ -56,7 +55,6 @@ export function useReportMetadata() {
  */
 export function useGenerateReport() {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async (filters: ReportFilters) => {
       const response = await generateReport(filters);
@@ -69,7 +67,6 @@ export function useGenerateReport() {
       toast.success("Report generated successfully", {
         description: "Your report is ready for download",
       });
-
       // Cache the report data
       queryClient.setQueryData(reportKeys.report(variables), data);
     },
@@ -107,7 +104,6 @@ export function useReportData(filters: ReportFilters, enabled: boolean = true) {
  */
 export function useInvalidateReports() {
   const queryClient = useQueryClient();
-
   return () => {
     queryClient.invalidateQueries({
       queryKey: reportKeys.all,
@@ -121,7 +117,6 @@ export function useInvalidateReports() {
  */
 export function useClearReportCache() {
   const queryClient = useQueryClient();
-
   return (filters?: ReportFilters) => {
     if (filters) {
       queryClient.removeQueries({
@@ -142,7 +137,6 @@ export function useClearReportCache() {
  */
 export function usePrefetchReport() {
   const queryClient = useQueryClient();
-
   return (filters: ReportFilters) => {
     queryClient.prefetchQuery({
       queryKey: reportKeys.report(filters),

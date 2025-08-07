@@ -1,5 +1,4 @@
 "use server";
-
 import { db } from "@/prisma/db";
 import { Resend } from "resend";
 import type {
@@ -12,6 +11,8 @@ import type {
 } from "@prisma/client";
 import { generatePDFReport } from "@/components/emails/pdf-report";
 import ReportEmailTemplate from "@/components/emails/report-email-template";
+import { generateExcelReport } from "@/lib/excel-report"; // Import the new Excel utility
+import ReportEmailTemplate2 from "@/components/emails/report-email-template2";
 
 // Initialize Resend
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -25,7 +26,8 @@ export type ReportType =
   | "USER_ACTIVITY"
   | "TIMELINE_ANALYTICS"
   | "ROUTE_ANALYTICS"
-  | "PERFORMANCE_METRICS";
+  | "PERFORMANCE_METRICS"
+  | "DAILY_SHIPMENT_REPORT"; // New report type
 
 export type DateRange = {
   from: Date;
@@ -34,11 +36,35 @@ export type DateRange = {
 
 export type ReportFilters = {
   type: ReportType;
-  dateRange?: DateRange;
+  dateRange?: DateRange; // General date range for other reports
+  dailyReportDate?: Date; // Specific date for daily report
+  dailyReportCustomerId?: string; // Specific customer for daily report
   status?: ShipmentStatus[];
   shipmentType?: ShipmentType[];
   customerId?: string;
   userId?: string;
+};
+
+export type DailyShipmentEntry = {
+  id: string;
+  refNo: string;
+  consignee: string | null;
+  billOfLadingNumber: string | null;
+  documentReceivedDate: Date | null;
+  documentSentDate: Date | null;
+  actualArrivalMombasaDate: Date | null;
+  containerNoAndSize: string | null;
+  deliveryOrderReceivedDate: Date | null;
+  entryRegisteredDate: Date | null;
+  customsReleaseDate: Date | null;
+  truckAllocationDate: Date | null;
+  truckNo: string | null;
+  portDepartureDate: Date | null;
+  arrivalMalabaDate: Date | null;
+  departureMalabaDate: Date | null;
+  arrivalNimuleDate: Date | null;
+  borderReleasedNimuleDate: Date | null;
+  finalDeliveryDate: Date | null;
 };
 
 export type ReportData = {
@@ -117,6 +143,7 @@ export type ReportData = {
     count: number;
     percentage: number;
   }>;
+  dailyShipments?: DailyShipmentEntry[]; // New field for daily shipment report
 };
 
 export type ApiResponse<T> = {
@@ -132,47 +159,130 @@ export type EmailNotificationResult = {
 
 export type SendReportEmailData = {
   recipientEmail: string;
-  reportData: ReportData;
+  reportData: ReportData; // This is a placeholder, actual data is generated inside
   reportType: ReportType;
   filters: ReportFilters;
   customerSpecific?: boolean;
+  attachmentFormat: "pdf" | "excel"; // New parameter
 };
-
-// Helper function to generate PDF buffer
-async function generateReportPDF(
-  reportData: ReportData,
-  reportType: ReportType,
-  filters: ReportFilters
-): Promise<Buffer> {
-  try {
-    return await generatePDFReport({ reportData, reportType, filters });
-  } catch (error) {
-    console.error("Error generating PDF:", error);
-    throw new Error("Failed to generate PDF attachment");
-  }
-}
 
 // Generate report (optimized)
 export async function generateReport(
   filters: ReportFilters
 ): Promise<ApiResponse<ReportData>> {
   try {
-    const { type, dateRange, status, shipmentType, customerId, userId } =
-      filters;
+    const {
+      type,
+      dateRange,
+      status,
+      shipmentType,
+      customerId,
+      userId,
+      dailyReportDate,
+      dailyReportCustomerId,
+    } = filters;
 
-    const baseWhere = {
-      ...(dateRange && {
-        createdAt: {
-          gte: dateRange.from,
-          lte: dateRange.to,
-        },
-      }),
+    // Base filters that apply to most shipment-related queries
+    let shipmentBaseFilters: any = {
       ...(status?.length && { status: { in: status } }),
       ...(shipmentType?.length && { type: { in: shipmentType } }),
       ...(customerId && { customerId }),
       ...(userId && { createdBy: userId }),
     };
 
+    // Date filtering logic
+    let dateFilter: any = {};
+    if (type === "DAILY_SHIPMENT_REPORT") {
+      const targetDate = dailyReportDate || new Date();
+      const startOfDay = new Date(targetDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(targetDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      dateFilter = {
+        createdAt: {
+          gte: startOfDay,
+          lte: endOfDay,
+        },
+      };
+      if (dailyReportCustomerId) {
+        shipmentBaseFilters = {
+          ...shipmentBaseFilters,
+          customerId: dailyReportCustomerId,
+        };
+      }
+    } else if (dateRange) {
+      dateFilter = {
+        createdAt: {
+          gte: dateRange.from,
+          lte: dateRange.to,
+        },
+      };
+    }
+
+    // Combine shipment-specific filters with date filters for shipment queries
+    const finalShipmentWhere = { ...shipmentBaseFilters, ...dateFilter };
+
+    // Fetch all shipments with their timeline events for the daily report
+    let dailyShipments: DailyShipmentEntry[] | undefined;
+    if (type === "DAILY_SHIPMENT_REPORT") {
+      const shipmentsWithTimeline = await db.shipment.findMany({
+        where: finalShipmentWhere, // This is the key for daily report
+        select: {
+          id: true,
+          reference: true,
+          consignee: true,
+          billOfLadingNumber: true,
+          container: true,
+          truck: true,
+          createdAt: true,
+          updatedAt: true,
+          timeline: {
+            select: {
+              status: true,
+              timestamp: true,
+              location: true,
+            },
+            orderBy: { timestamp: "asc" },
+          },
+        },
+      });
+
+      dailyShipments = shipmentsWithTimeline.map((shipment) => {
+        const getTimelineDate = (status: ShipmentStatus, location?: string) => {
+          const event = shipment.timeline.find(
+            (t) => t.status === status && (!location || t.location === location)
+          );
+          return event?.timestamp || null;
+        };
+
+        return {
+          id: shipment.id,
+          refNo: shipment.reference,
+          consignee: shipment.consignee,
+          billOfLadingNumber: shipment.billOfLadingNumber,
+          documentReceivedDate: getTimelineDate("DOCUMENT_RECEIVED"),
+          documentSentDate: getTimelineDate("DOCUMENTS_SENT"),
+          actualArrivalMombasaDate: getTimelineDate("ARRIVAL_MOMBASA"),
+          containerNoAndSize: shipment.container,
+          deliveryOrderReceivedDate: getTimelineDate("DELIVERY_ORDER_OBTAINED"),
+          entryRegisteredDate: getTimelineDate("ENTRY_REGISTERED"),
+          customsReleaseDate: getTimelineDate("CUSTOM_RELEASED"),
+          truckAllocationDate: getTimelineDate("TRUCK_ALLOCATED"),
+          truckNo: shipment.truck,
+          portDepartureDate: getTimelineDate("PORT_DEPARTURE"),
+          arrivalMalabaDate: getTimelineDate("ARRIVAL_MALABA"),
+          departureMalabaDate: getTimelineDate("DEPARTURE_MALABA"),
+          arrivalNimuleDate: getTimelineDate("ARRIVAL_NIMULE"),
+          borderReleasedNimuleDate: getTimelineDate("NIMULE_BORDER_RELEASED"),
+          finalDeliveryDate:
+            getTimelineDate("DELIVERED") || getTimelineDate("EMPTY_RETURNED"),
+        };
+      });
+    }
+
+    // Apply finalShipmentWhere to all shipment-related counts/groups.
+    // For non-shipment entities (customers, documents, users, notifications),
+    // use the original dateRange or no date filter if dateRange is not provided.
     const [
       totalShipments,
       activeShipments,
@@ -191,19 +301,20 @@ export async function generateReport(
       totalCompletedShipments,
       totalVerifiedDocs,
     ] = await Promise.all([
-      db.shipment.count({ where: baseWhere }),
+      db.shipment.count({ where: finalShipmentWhere }),
       db.shipment.count({
         where: {
-          ...baseWhere,
+          ...finalShipmentWhere,
           status: { in: ["CREATED", "IN_TRANSIT", "CARGO_ARRIVED"] },
         },
       }),
       db.shipment.count({
         where: {
-          ...baseWhere,
+          ...finalShipmentWhere,
           status: { in: ["DELIVERED", "EMPTY_RETURNED"] },
         },
       }),
+      // For non-shipment related counts, use the original dateRange or no filter
       db.customer.count({
         where: dateRange
           ? { createdAt: { gte: dateRange.from, lte: dateRange.to } }
@@ -230,12 +341,12 @@ export async function generateReport(
       db.shipment.groupBy({
         by: ["status"],
         _count: { status: true },
-        where: baseWhere,
+        where: finalShipmentWhere,
       }),
       db.shipment.groupBy({
         by: ["type"],
         _count: { type: true },
-        where: baseWhere,
+        where: finalShipmentWhere,
       }),
       db.document.groupBy({
         by: ["status"],
@@ -259,7 +370,7 @@ export async function generateReport(
           id: true,
           name: true,
           shipments: {
-            where: baseWhere,
+            where: finalShipmentWhere, // Shipments within customer analytics should respect the daily filter if it's a daily report
             select: {
               id: true,
               status: true,
@@ -288,7 +399,7 @@ export async function generateReport(
       }),
       db.shipment.findMany({
         where: {
-          ...baseWhere,
+          ...finalShipmentWhere,
           status: { in: ["DELIVERED", "EMPTY_RETURNED"] },
         },
         select: {
@@ -354,6 +465,7 @@ export async function generateReport(
               0
             ) / completedShipments.length
           : 0;
+
       return {
         customerId: customer.id,
         customerName: customer.name,
@@ -389,7 +501,7 @@ export async function generateReport(
           await Promise.all([
             db.shipment.count({
               where: {
-                ...baseWhere,
+                ...finalShipmentWhere, // Apply filter here
                 createdAt: { gte: month.start, lte: month.end },
               },
             }),
@@ -398,12 +510,13 @@ export async function generateReport(
             }),
             db.shipment.count({
               where: {
-                ...baseWhere,
+                ...finalShipmentWhere, // Apply filter here
                 createdAt: { gte: month.start, lte: month.end },
                 status: { in: ["DELIVERED", "EMPTY_RETURNED"] },
               },
             }),
           ]);
+
         return {
           month: month.label,
           shipments: shipmentCount,
@@ -437,7 +550,10 @@ export async function generateReport(
     const routeData = await db.shipment.groupBy({
       by: ["origin", "destination"],
       _count: { id: true },
-      where: { ...baseWhere, status: { in: ["DELIVERED", "EMPTY_RETURNED"] } },
+      where: {
+        ...finalShipmentWhere,
+        status: { in: ["DELIVERED", "EMPTY_RETURNED"] },
+      }, // Apply filter here
       orderBy: { _count: { id: "desc" } },
       take: 10,
     });
@@ -468,7 +584,7 @@ export async function generateReport(
         updatedAt: true,
         _count: {
           select: {
-            shipments: { where: baseWhere },
+            shipments: { where: finalShipmentWhere }, // Apply filter here
             documents: {
               where: dateRange
                 ? { uploadedAt: { gte: dateRange.from, lte: dateRange.to } }
@@ -551,6 +667,7 @@ export async function generateReport(
       timelineAnalytics,
       performanceMetrics,
       notifications: notificationData,
+      ...(type === "DAILY_SHIPMENT_REPORT" && { dailyShipments }), // Conditionally add dailyShipments
     };
 
     return { success: true, data: reportData };
@@ -622,13 +739,14 @@ export async function getCustomersForEmail(): Promise<
   }
 }
 
-// Send report email with PDF attachment
+// Send report email with PDF/Excel attachment
 export async function sendReportEmail({
   recipientEmail,
-  reportData,
+  reportData, // This is a placeholder, actual data is generated inside
   reportType,
   filters,
   customerSpecific = false,
+  attachmentFormat, // Destructure new parameter
 }: SendReportEmailData): Promise<ApiResponse<{ messageId: string }>> {
   try {
     if (!process.env.RESEND_API_KEY) {
@@ -636,7 +754,23 @@ export async function sendReportEmail({
       return { success: false, error: "Email service not configured" };
     }
 
-    const pdfBuffer = await generateReportPDF(reportData, reportType, filters);
+    // Generate the report data dynamically based on filters
+    const generatedReportResponse = await generateReport(filters);
+    if (!generatedReportResponse.success || !generatedReportResponse.data) {
+      throw new Error(
+        generatedReportResponse.error ||
+          "Failed to generate report data for email."
+      );
+    }
+    const actualReportData = generatedReportResponse.data;
+
+    const attachmentBuffer = await generateReportAttachment(
+      actualReportData,
+      reportType,
+      filters,
+      attachmentFormat
+    );
+
     const reportTypeName =
       {
         SHIPMENTS_SUMMARY: "Shipments Summary",
@@ -647,7 +781,16 @@ export async function sendReportEmail({
         TIMELINE_ANALYTICS: "Timeline Analytics",
         ROUTE_ANALYTICS: "Route Analytics",
         PERFORMANCE_METRICS: "Performance Metrics",
+        DAILY_SHIPMENT_REPORT: "Daily Shipment", // Title for the new report type
       }[reportType] || "Report";
+
+    const attachmentFilename = `${reportType.toLowerCase()}_report_${
+      new Date().toISOString().split("T")[0]
+    }.${attachmentFormat === "pdf" ? "pdf" : "xlsx"}`;
+    const attachmentContentType =
+      attachmentFormat === "pdf"
+        ? "application/pdf"
+        : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
     const subject = customerSpecific
       ? `Your ${reportTypeName} Report`
@@ -657,18 +800,16 @@ export async function sendReportEmail({
       from: "Reports <reports@lubegajovan.com>",
       to: [recipientEmail],
       subject,
-      react: ReportEmailTemplate({
+      react: ReportEmailTemplate2({
         reportType: reportTypeName,
         generatedAt: new Date(),
         filters,
-        summary: reportData.summary,
       }),
       attachments: [
         {
-          filename: `${reportType.toLowerCase()}_report_${
-            new Date().toISOString().split("T")[0]
-          }.pdf`,
-          content: pdfBuffer,
+          filename: attachmentFilename,
+          content: attachmentBuffer,
+          contentType: attachmentContentType,
         },
       ],
     });
@@ -685,5 +826,95 @@ export async function sendReportEmail({
       error:
         error instanceof Error ? error.message : "Failed to send report email",
     };
+  }
+}
+
+// New action for direct download
+// Fixed downloadReport function - only the relevant parts that need to be updated
+
+// New action for direct download - FIXED VERSION
+export async function downloadReport(
+  filters: ReportFilters,
+  format: "pdf" | "excel"
+): Promise<ApiResponse<string>> {
+  // Returns base64 string
+  try {
+    // Validate format parameter
+    if (!format || (format !== "pdf" && format !== "excel")) {
+      console.error("Invalid format provided:", format);
+      return {
+        success: false,
+        error: "Invalid format. Must be 'pdf' or 'excel'.",
+      };
+    }
+
+    console.log(`Starting report generation with format: ${format}`);
+
+    const generatedReportResponse = await generateReport(filters);
+    if (!generatedReportResponse.success || !generatedReportResponse.data) {
+      throw new Error(
+        generatedReportResponse.error ||
+          "Failed to generate report data for download."
+      );
+    }
+    const actualReportData = generatedReportResponse.data;
+
+    console.log(
+      `Generating ${format} attachment for report type: ${filters.type}`
+    );
+
+    const buffer = await generateReportAttachment(
+      actualReportData,
+      filters.type,
+      filters,
+      format
+    );
+
+    console.log(`Successfully generated ${format} report`);
+
+    return { success: true, data: buffer.toString("base64") };
+  } catch (error) {
+    console.error("Error downloading report:", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : "Failed to download report",
+    };
+  }
+}
+
+// Also fix the generateReportAttachment function - FIXED VERSION
+async function generateReportAttachment(
+  reportData: ReportData,
+  reportType: ReportType,
+  filters: ReportFilters,
+  format: "pdf" | "excel"
+): Promise<Buffer> {
+  try {
+    console.log(
+      `generateReportAttachment called with format: ${format}, reportType: ${reportType}`
+    );
+
+    // Validate format parameter
+    if (!format) {
+      throw new Error("Format parameter is required");
+    }
+
+    if (format === "pdf") {
+      console.log("Generating PDF report...");
+      return await generatePDFReport({ reportData, reportType, filters });
+    } else if (format === "excel") {
+      console.log("Generating Excel report...");
+      return await generateExcelReport(reportData, reportType, filters);
+    } else {
+      throw new Error(`Unsupported attachment format: ${format}`);
+    }
+  } catch (error) {
+    console.error(`Error generating ${format} report:`, error);
+    throw new Error(
+      `Failed to generate ${format} attachment: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
   }
 }

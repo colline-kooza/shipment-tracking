@@ -29,6 +29,7 @@ import DashboardSkeleton, {
 import { DocumentType } from "@prisma/client";
 import { toast } from "sonner";
 import ReportGenerationModal from "@/components/dashboard/ReportPreview";
+import DailyReportGenerator from "@/components/dashboard/DailyReportGenerator";
 
 interface QuickActionsProps {
   onUploadDocumentClick: () => void;
@@ -204,7 +205,7 @@ const QuickActions = ({
   <div>
     <h2 className="text-lg font-medium text-gray-900 mb-4">Quick Actions</h2>
     <Card className="p-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Link href="/dashboard/shipments-trakit/new">
           <Button className="w-full bg-[#0f2557]">Create New Shipment</Button>
         </Link>
@@ -215,13 +216,15 @@ const QuickActions = ({
         >
           Upload Documents
         </Button>
+        <DailyReportGenerator />
         <Button
           variant="outline"
           className="w-full"
           onClick={onGenerateReportClick}
         >
-          Generate Report
+          Generate Full Report
         </Button>
+        
       </div>
     </Card>
   </div>

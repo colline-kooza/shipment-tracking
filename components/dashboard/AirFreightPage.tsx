@@ -16,6 +16,7 @@ import {
   BarChart3,
   Info,
   FileText,
+  Truck,
 } from "lucide-react"
 import { format } from "date-fns"
 import { ShipmentStatus } from "@prisma/client"
@@ -140,7 +141,13 @@ const statusMap: Record<ShipmentStatus, { icon: React.ReactNode; label: string }
   [ShipmentStatus.DELIVERED]: { icon: <CheckCircle2 size={14} />, label: "Delivered" },
   [ShipmentStatus.EMPTY_RETURNED]: { icon: <CheckCircle2 size={14} />, label: "Empty Returned" },
   [ShipmentStatus.DOCUMENT_REJECTED]: { icon: <XCircle size={14} />, label: "Doc Rejected" },
-}
+
+  // ✅ Add missing statuses
+  [ShipmentStatus.ARRIVAL_MOMBASA]: { icon: <Plane size={14} />, label: "Arrived Mombasa" },
+  [ShipmentStatus.TRUCK_ALLOCATED]: { icon: <Truck size={14} />, label: "Truck Allocated" },
+  [ShipmentStatus.PORT_DEPARTURE]: { icon: <ArrowRight size={14} />, label: "Port Departure" },
+};
+
     const statusInfo = statusMap[status] || { icon: <Clock size={14} />, label: status }
     return (
       <Badge className={`flex items-center gap-1 ${getStatusClass(status)}`}>

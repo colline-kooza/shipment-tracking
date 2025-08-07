@@ -1,14 +1,15 @@
 "use client";
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   generateReport,
   getReportMetadata,
   getCustomersForEmail,
   sendReportEmail,
+  downloadReport, // Import the new action
   type ReportFilters,
   type ReportData,
   type ReportType,
+  type ApiResponse,
 } from "@/actions/reports";
 
 export function useReportMetadata() {
@@ -73,23 +74,44 @@ export function useSendReportEmail() {
       reportData,
       reportType,
       filters,
-      customerSpecific, // Add this parameter
+      customerSpecific,
+      attachmentFormat, // Add this parameter
     }: {
       recipientEmail: string;
       reportData: ReportData;
       reportType: ReportType;
       filters: ReportFilters;
-      customerSpecific: boolean; // Add this to the type definition
+      customerSpecific: boolean;
+      attachmentFormat: "pdf" | "excel"; // Add this to the type definition
     }) => {
       const result = await sendReportEmail({
         recipientEmail,
         reportData,
         reportType,
         filters,
-        customerSpecific, // Pass it to the function
+        customerSpecific,
+        attachmentFormat, // Pass it to the function
       });
       if (!result.success)
         throw new Error(result.error || "Failed to send report email");
+      return result.data;
+    },
+  });
+}
+
+export function useDownloadReport() {
+  return useMutation({
+    mutationFn: async ({
+      filters,
+      format,
+    }: {
+      filters: ReportFilters;
+      format: "pdf" | "excel";
+    }) => {
+      const result = await downloadReport(filters, format);
+      if (!result.success) {
+        throw new Error(result.error || `Failed to download ${format} report`);
+      }
       return result.data;
     },
   });

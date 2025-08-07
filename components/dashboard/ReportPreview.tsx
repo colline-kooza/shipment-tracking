@@ -23,23 +23,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import {
-  Download,
-  BarChart3,
-  Users,
-  Package,
-  FileCheck,
-  TrendingUp,
-  MapPin,
-  Activity,
-  Loader2,
-  CheckCircle,
-  X,
-  RefreshCw,
-  Clock,
-  Target,
-  Send,
-} from "lucide-react";
+import { Download, BarChart3, Users, Package, FileCheck, TrendingUp, MapPin, Activity, Loader2, CheckCircle, X, RefreshCw, Clock, Target, Send, CalendarIcon } from 'lucide-react';
 import {
   useReportMetadata,
   useGenerateReport,
@@ -50,13 +34,19 @@ import type { ShipmentStatus, ShipmentType } from "@prisma/client";
 import type { ReportData, ReportType, ReportFilters } from "@/actions/reports";
 import { toast } from "sonner";
 import { generatePDFReport } from "../emails/pdf-report";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import ReportPreview from "./ReportPreview2";
+import DailyShipmentReportPreview from "../emails/DailyShipmentReportPreview";
 
 interface ReportGenerationModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-// PDF Download Component
+// PDF Download Component (kept for clarity, but integrated into main component's download logic)
 const PDFDownloadComponent: React.FC<{
   reportData: ReportData;
   reportType: ReportType;
@@ -78,7 +68,6 @@ const PDFDownloadComponent: React.FC<{
       toast.error("Failed to generate PDF");
     }
   };
-
   return (
     <Button onClick={handleDownloadPDF} className="bg-red-600 hover:bg-red-700">
       <Download className="h-4 w-4 mr-2" />
@@ -87,170 +76,9 @@ const PDFDownloadComponent: React.FC<{
   );
 };
 
-// Report Preview Component
-const ReportPreview: React.FC<{
-  reportData: ReportData;
-  reportType: ReportType;
-  filters: ReportFilters;
-}> = ({ reportData, reportType }) => {
-  const formatNumber = (num: number) => new Intl.NumberFormat().format(num);
-  const formatPercentage = (num: number) => `${num}%`;
-  const reportTypeName = {
-    SHIPMENTS_SUMMARY: "Shipments Summary",
-    DOCUMENT_STATUS: "Document Status",
-    CUSTOMER_ANALYTICS: "Customer Analytics",
-    REVENUE_ANALYSIS: "Revenue Analysis",
-    USER_ACTIVITY: "User Activity",
-    TIMELINE_ANALYTICS: "Timeline Analytics",
-    ROUTE_ANALYTICS: "Route Analytics",
-    PERFORMANCE_METRICS: "Performance Metrics",
-  }[reportType] || "Report";
-
-  return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-gray-900">Report Generated Successfully</h3>
-        <p className="text-gray-600">Your {reportTypeName} report is ready</p>
-      </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="p-4">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600">{formatNumber(reportData.summary.totalShipments)}</div>
-            <div className="text-sm text-gray-600">Total Shipments</div>
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-green-600">{formatNumber(reportData.summary.activeShipments)}</div>
-            <div className="text-sm text-gray-600">Active Shipments</div>
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-purple-600">{formatNumber(reportData.summary.totalCustomers)}</div>
-            <div className="text-sm text-gray-600">Total Customers</div>
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-orange-600">{formatNumber(reportData.summary.totalDocuments)}</div>
-            <div className="text-sm text-gray-600">Total Documents</div>
-          </div>
-        </Card>
-      </div>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Shipment Status Distribution</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {reportData.shipmentsByStatus.map((status) => (
-              <div key={status.status} className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                    {status.status.replace("_", " ")}
-                  </Badge>
-                  <span className="text-sm text-gray-600">{formatNumber(status.count)} shipments</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Progress value={status.percentage} className="w-20" />
-                  <span className="text-sm font-medium">{formatPercentage(status.percentage)}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Performance Metrics</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center p-4 bg-green-50 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">
-                {formatPercentage(reportData.performanceMetrics.onTimeDeliveryRate)}
-              </div>
-              <div className="text-sm text-gray-600">On-Time Delivery</div>
-            </div>
-            <div className="text-center p-4 bg-blue-50 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">
-                {formatPercentage(reportData.performanceMetrics.documentApprovalRate)}
-              </div>
-              <div className="text-sm text-gray-600">Document Approval</div>
-            </div>
-            <div className="text-center p-4 bg-purple-50 rounded-lg">
-              <div className="text-2xl font-bold text-purple-600">
-                {reportData.performanceMetrics.customerSatisfactionScore}
-              </div>
-              <div className="text-sm text-gray-600">Satisfaction Score</div>
-            </div>
-            <div className="text-center p-4 bg-orange-50 rounded-lg">
-              <div className="text-2xl font-bold text-orange-600">
-                {reportData.performanceMetrics.averageDeliveryTime}d
-              </div>
-              <div className="text-sm text-gray-600">Avg Delivery Time</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      {reportData.topRoutes.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Top Routes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {reportData.topRoutes.slice(0, 5).map((route, index) => (
-                <div key={index} className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <MapPin className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm font-medium">{route.route}</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm text-gray-600">{formatNumber(route.count)}</span>
-                    <Badge variant="outline">{formatPercentage(route.percentage)}</Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-      {reportData.customerAnalytics.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Top Customers</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {reportData.customerAnalytics.slice(0, 5).map((customer) => (
-                <div key={customer.customerId} className="flex items-center justify-between">
-                  <div>
-                    <div className="font-medium">{customer.customerName}</div>
-                    <div className="text-sm text-gray-600">{formatNumber(customer.totalShipments)} total shipments</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm">
-                      <span className="text-green-600">{formatNumber(customer.completedShipments)} completed</span>
-                      <span className="text-gray-400 mx-1">•</span>
-                      <span className="text-orange-600">{formatNumber(customer.pendingShipments)} pending</span>
-                    </div>
-                    <div className="text-xs text-gray-500">Avg delivery: {customer.averageDeliveryTime} days</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  );
-};
-
 const REPORT_TYPES = [
   { id: "SHIPMENTS_SUMMARY" as ReportType, name: "Shipments Summary", description: "Comprehensive overview of all shipments with status breakdown and trends", icon: Package, color: "bg-blue-500" },
+  { id: "DAILY_SHIPMENT_REPORT" as ReportType, name: "Daily Shipment Report", description: "Detailed daily report of individual shipments and their timeline", icon: Clock, color: "bg-red-500" }, // New report type
   { id: "DOCUMENT_STATUS" as ReportType, name: "Document Status", description: "Document verification analytics and processing status", icon: FileCheck, color: "bg-green-500" },
   { id: "CUSTOMER_ANALYTICS" as ReportType, name: "Customer Analytics", description: "Customer activity patterns and performance metrics", icon: Users, color: "bg-purple-500" },
   { id: "REVENUE_ANALYSIS" as ReportType, name: "Revenue Analysis", description: "Financial performance and revenue trend analysis", icon: TrendingUp, color: "bg-orange-500" },
@@ -279,13 +107,16 @@ const SHIPMENT_STATUSES = [
   "ARRIVAL_MALABA",
   "DEPARTURE_MALABA",
   "ARRIVAL_NIMULE",
+  "ARRIVAL_MOMBASA", // New status
+  "TRUCK_ALLOCATED", // New status
+  "PORT_DEPARTURE", // New status
 ] as ShipmentStatus[];
 
 const SHIPMENT_TYPES = ["SEA", "AIR", "ROAD"] as ShipmentType[];
 
 export default function ReportGenerationModal({ isOpen, onClose }: ReportGenerationModalProps) {
   const [selectedReportType, setSelectedReportType] = useState<ReportType>("SHIPMENTS_SUMMARY");
-  const [dateRange, setDateRange] = useState({ from: "", to: "" });
+  const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({ from: undefined, to: undefined });
   const [selectedStatuses, setSelectedStatuses] = useState<ShipmentStatus[]>([]);
   const [selectedTypes, setSelectedTypes] = useState<ShipmentType[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<string>("all");
@@ -295,6 +126,7 @@ export default function ReportGenerationModal({ isOpen, onClose }: ReportGenerat
   const [progress, setProgress] = useState(0);
   const [emailRecipient, setEmailRecipient] = useState<string>("");
   const [selectedCustomerForEmail, setSelectedCustomerForEmail] = useState<string>("none");
+  const [selectedDownloadFormat, setSelectedDownloadFormat] = useState<"pdf" | "excel">("pdf"); // New state for download format
 
   const { data: metadata, isLoading: metadataLoading } = useReportMetadata();
   const { data: customersForEmail, isLoading: customersLoading } = useCustomersForEmail();
@@ -303,7 +135,7 @@ export default function ReportGenerationModal({ isOpen, onClose }: ReportGenerat
 
   const resetForm = () => {
     setSelectedReportType("SHIPMENTS_SUMMARY");
-    setDateRange({ from: "", to: "" });
+    setDateRange({ from: undefined, to: undefined });
     setSelectedStatuses([]);
     setSelectedTypes([]);
     setSelectedCustomer("all");
@@ -313,6 +145,7 @@ export default function ReportGenerationModal({ isOpen, onClose }: ReportGenerat
     setCurrentStep("config");
     setGeneratedReport(null);
     setProgress(0);
+    setSelectedDownloadFormat("pdf");
   };
 
   const handleClose = () => {
@@ -344,13 +177,14 @@ export default function ReportGenerationModal({ isOpen, onClose }: ReportGenerat
       type: selectedReportType,
       ...(dateRange.from &&
         dateRange.to && {
-          dateRange: { from: new Date(dateRange.from), to: new Date(dateRange.to) },
+          dateRange: { from: dateRange.from, to: dateRange.to },
         }),
       ...(selectedStatuses.length > 0 && { status: selectedStatuses }),
       ...(selectedTypes.length > 0 && { shipmentType: selectedTypes }),
       ...(selectedCustomer !== "all" && { customerId: selectedCustomer }),
       ...(selectedUser !== "all" && { userId: selectedUser }),
     };
+
     setCurrentStep("generating");
     setProgress(0);
     try {
@@ -367,22 +201,47 @@ export default function ReportGenerationModal({ isOpen, onClose }: ReportGenerat
     }
   };
 
-  const handleDownloadReport = () => {
+  const handleDownloadReport = async (format: "pdf" | "excel") => {
     if (!generatedReport) return;
-    const reportContent = {
+
+    const filters: ReportFilters = {
       type: selectedReportType,
-      generatedAt: new Date().toISOString(),
-      filters: { dateRange, statuses: selectedStatuses, types: selectedTypes, customer: selectedCustomer, user: selectedUser },
-      data: generatedReport,
+      dateRange: dateRange.from && dateRange.to ? { from: dateRange.from, to: dateRange.to } : undefined,
+      status: selectedStatuses,
+      shipmentType: selectedTypes,
+      customerId: selectedCustomer !== "all" ? selectedCustomer : undefined,
+      userId: selectedUser !== "all" ? selectedUser : undefined,
     };
-    const blob = new Blob([JSON.stringify(reportContent, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${selectedReportType.toLowerCase()}_report_${new Date().toISOString().split("T")[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success("JSON Downloaded");
+
+    try {
+      let fileBuffer: Buffer;
+      let fileName: string;
+      let fileType: string;
+
+      if (format === "pdf") {
+        fileBuffer = await generatePDFReport({ reportData: generatedReport, reportType: selectedReportType, filters });
+        fileName = `${selectedReportType.toLowerCase()}_report_${new Date().toISOString().split("T")[0]}.pdf`;
+        fileType = "application/pdf";
+      } else { // format === "excel"
+        // Assuming generateExcelReport is available and imported
+        const { generateExcelReport } = await import("@/lib/excel-report");
+        fileBuffer = await generateExcelReport(generatedReport, selectedReportType, filters);
+        fileName = `${selectedReportType.toLowerCase()}_report_${new Date().toISOString().split("T")[0]}.xlsx`;
+        fileType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+      }
+
+      const blob = new Blob([fileBuffer], { type: fileType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`${format.toUpperCase()} Downloaded`);
+    } catch (error) {
+      console.error(`Error generating ${format.toUpperCase()}:`, error);
+      toast.error(`Failed to generate ${format.toUpperCase()}`);
+    }
   };
 
   const handleSendReport = async () => {
@@ -390,7 +249,6 @@ export default function ReportGenerationModal({ isOpen, onClose }: ReportGenerat
       toast.error("No report generated to send.");
       return;
     }
-
     let recipient = emailRecipient;
     let customerSpecific = false;
     if (selectedCustomerForEmail !== "none") {
@@ -403,31 +261,29 @@ export default function ReportGenerationModal({ isOpen, onClose }: ReportGenerat
         return;
       }
     }
-
     if (!recipient) {
       toast.error("Please enter an email address or select a customer.");
       return;
     }
-
     try {
       const filters: ReportFilters = {
         type: selectedReportType,
         ...(dateRange.from &&
           dateRange.to && {
-            dateRange: { from: new Date(dateRange.from), to: new Date(dateRange.to) },
+            dateRange: { from: dateRange.from, to: dateRange.to },
           }),
         ...(selectedStatuses.length > 0 && { status: selectedStatuses }),
         ...(selectedTypes.length > 0 && { shipmentType: selectedTypes }),
         ...(selectedCustomer !== "all" && { customerId: selectedCustomer }),
         ...(selectedUser !== "all" && { userId: selectedUser }),
       };
-
       await sendReportEmailMutation.mutateAsync({
         recipientEmail: recipient,
         reportData: generatedReport,
         reportType: selectedReportType,
         filters,
-        customerSpecific, // Include customerSpecific
+        customerSpecific,
+        attachmentFormat: selectedDownloadFormat, // Pass the selected format
       });
       toast.success(`Report sent to ${recipient}`);
       handleClose();
@@ -499,19 +355,53 @@ export default function ReportGenerationModal({ isOpen, onClose }: ReportGenerat
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label>From Date</Label>
-                    <Input
-                      type="date"
-                      value={dateRange.from}
-                      onChange={(e) => setDateRange((prev) => ({ ...prev, from: e.target.value }))}
-                    />
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !dateRange.from && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {dateRange.from ? format(dateRange.from, "PPP") : <span>Pick a date</span>}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={dateRange.from}
+                          onSelect={(date) => setDateRange((prev) => ({ ...prev, from: date || undefined }))}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
                   </div>
                   <div>
                     <Label>To Date</Label>
-                    <Input
-                      type="date"
-                      value={dateRange.to}
-                      onChange={(e) => setDateRange((prev) => ({ ...prev, to: e.target.value }))}
-                    />
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !dateRange.to && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {dateRange.to ? format(dateRange.to, "PPP") : <span>Pick a date</span>}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={dateRange.to}
+                          onSelect={(date) => setDateRange((prev) => ({ ...prev, to: date || undefined }))}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
                   </div>
                 </div>
               </TabsContent>
@@ -630,21 +520,33 @@ export default function ReportGenerationModal({ isOpen, onClose }: ReportGenerat
           </div>
         )}
         {currentStep === "preview" && generatedReport && (
-          <ReportPreview
-            reportData={generatedReport}
-            reportType={selectedReportType}
-            filters={{
-              type: selectedReportType,
-              dateRange:
-                dateRange.from && dateRange.to
-                  ? { from: new Date(dateRange.from), to: new Date(dateRange.to) }
-                  : undefined,
-              status: selectedStatuses,
-              shipmentType: selectedTypes,
-              customerId: selectedCustomer !== "all" ? selectedCustomer : undefined,
-              userId: selectedUser !== "all" ? selectedUser : undefined,
-            }}
-          />
+          selectedReportType === "DAILY_SHIPMENT_REPORT" ? (
+            <DailyShipmentReportPreview
+              reportData={generatedReport}
+              reportType={selectedReportType}
+              filters={{
+                type: selectedReportType,
+                dateRange: dateRange.from && dateRange.to ? { from: dateRange.from, to: dateRange.to } : undefined,
+                status: selectedStatuses,
+                shipmentType: selectedTypes,
+                customerId: selectedCustomer !== "all" ? selectedCustomer : undefined,
+                userId: selectedUser !== "all" ? selectedUser : undefined,
+              }}
+            />
+          ) : (
+            <ReportPreview
+              reportData={generatedReport}
+              reportType={selectedReportType}
+              filters={{
+                type: selectedReportType,
+                dateRange: dateRange.from && dateRange.to ? { from: dateRange.from, to: dateRange.to } : undefined,
+                status: selectedStatuses,
+                shipmentType: selectedTypes,
+                customerId: selectedCustomer !== "all" ? selectedCustomer : undefined,
+                userId: selectedUser !== "all" ? selectedUser : undefined,
+              }}
+            />
+          )
         )}
         {currentStep === "send" && generatedReport && (
           <div className="space-y-6">
@@ -692,6 +594,21 @@ export default function ReportGenerationModal({ isOpen, onClose }: ReportGenerat
                 </Select>
                 {customersLoading && <p className="text-sm text-gray-500 mt-1">Loading customers...</p>}
               </div>
+              <div>
+                <Label htmlFor="attachmentFormat">Attachment Format</Label>
+                <Select
+                  value={selectedDownloadFormat}
+                  onValueChange={(value: "pdf" | "excel") => setSelectedDownloadFormat(value)}
+                >
+                  <SelectTrigger id="attachmentFormat">
+                    <SelectValue placeholder="Select format" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pdf">PDF</SelectItem>
+                    <SelectItem value="excel">Excel</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
         )}
@@ -705,7 +622,7 @@ export default function ReportGenerationModal({ isOpen, onClose }: ReportGenerat
             )}
             {currentStep === "generating" && (
               <Button variant="outline" disabled>
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                <Loader2 className= "h-4 w-4 animate-spin mr-2" />
                 Processing...
               </Button>
             )}
@@ -735,25 +652,19 @@ export default function ReportGenerationModal({ isOpen, onClose }: ReportGenerat
             )}
             {currentStep === "preview" && generatedReport && (
               <>
-                <Button onClick={handleDownloadReport} className="bg-green-600 hover:bg-green-700">
+                <Select value={selectedDownloadFormat} onValueChange={(value: "pdf" | "excel") => setSelectedDownloadFormat(value)}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Download As" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pdf">Download PDF</SelectItem>
+                    <SelectItem value="excel">Download Excel</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button onClick={() => handleDownloadReport(selectedDownloadFormat)} className="bg-green-600 hover:bg-green-700">
                   <Download className="h-4 w-4 mr-2" />
-                  Download JSON
+                  Download {selectedDownloadFormat.toUpperCase()}
                 </Button>
-                <PDFDownloadComponent
-                  reportData={generatedReport}
-                  reportType={selectedReportType}
-                  filters={{
-                    type: selectedReportType,
-                    dateRange:
-                      dateRange.from && dateRange.to
-                        ? { from: new Date(dateRange.from), to: new Date(dateRange.to) }
-                        : undefined,
-                    status: selectedStatuses,
-                    shipmentType: selectedTypes,
-                    customerId: selectedCustomer !== "all" ? selectedCustomer : undefined,
-                    userId: selectedUser !== "all" ? selectedUser : undefined,
-                  }}
-                />
                 <Button onClick={() => setCurrentStep("send")} className="bg-purple-600 hover:bg-purple-700">
                   <Send className="h-4 w-4 mr-2" />
                   Send Report

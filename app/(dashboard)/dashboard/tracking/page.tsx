@@ -92,26 +92,31 @@ export default function TrackingPage() {
 
   // Determine if checkpoint is active based on shipment status
   const determineCheckpointActive = (status: ShipmentStatus, checkpointName: string) => {
-    const statusOrder: Record<ShipmentStatus, number> = {
-      [ShipmentStatus.CREATED]: 1,
-      [ShipmentStatus.DOCUMENT_RECEIVED]: 2,
-      [ShipmentStatus.DOCUMENTS_SENT]: 3,
-      [ShipmentStatus.IN_TRANSIT]: 4,
-      [ShipmentStatus.CARGO_ARRIVED]: 5,
-      [ShipmentStatus.TRANSFERRED_TO_CFS]: 6,
-      [ShipmentStatus.ENTRY_REGISTERED]: 7,
-      [ShipmentStatus.CUSTOM_RELEASED]: 8,
-      [ShipmentStatus.DELIVERY_ORDER_OBTAINED]: 9,
-      [ShipmentStatus.TAXES_PAID]: 10,
-      [ShipmentStatus.ARRIVAL_MALABA]: 11,
-      [ShipmentStatus.DEPARTURE_MALABA]: 12,
-      [ShipmentStatus.ARRIVAL_NIMULE]: 13,
-      [ShipmentStatus.NIMULE_BORDER_RELEASED]: 14,
-      [ShipmentStatus.DELIVERED]: 15,
-      [ShipmentStatus.EMPTY_RETURNED]: 16,
-      [ShipmentStatus.UPDATED]: 17, // Generic update status
-      [ShipmentStatus.DOCUMENT_REJECTED]: 0, // Special case, not part of linear progress
-    }
+ const statusOrder: Record<ShipmentStatus, number> = {
+  [ShipmentStatus.CREATED]: 1,
+  [ShipmentStatus.DOCUMENT_RECEIVED]: 2,
+  [ShipmentStatus.DOCUMENTS_SENT]: 3,
+  [ShipmentStatus.IN_TRANSIT]: 4,
+  [ShipmentStatus.CARGO_ARRIVED]: 5,
+  [ShipmentStatus.TRANSFERRED_TO_CFS]: 6,
+  [ShipmentStatus.ENTRY_REGISTERED]: 7,
+  [ShipmentStatus.CUSTOM_RELEASED]: 8,
+  [ShipmentStatus.DELIVERY_ORDER_OBTAINED]: 9,
+  [ShipmentStatus.TAXES_PAID]: 10,
+  [ShipmentStatus.ARRIVAL_MALABA]: 11,
+  [ShipmentStatus.DEPARTURE_MALABA]: 12,
+  [ShipmentStatus.ARRIVAL_NIMULE]: 13,
+  [ShipmentStatus.NIMULE_BORDER_RELEASED]: 14,
+  [ShipmentStatus.DELIVERED]: 15,
+  [ShipmentStatus.EMPTY_RETURNED]: 16,
+  [ShipmentStatus.UPDATED]: 17,
+  [ShipmentStatus.DOCUMENT_REJECTED]: 0,
+
+  // ✅ Add the missing ones
+  [ShipmentStatus.ARRIVAL_MOMBASA]: 1.5,
+  [ShipmentStatus.TRUCK_ALLOCATED]: 2.5,
+  [ShipmentStatus.PORT_DEPARTURE]: 3.5,
+};
 
     const checkpointOrder: Record<string, number> = {
       Created: 1,
@@ -126,26 +131,31 @@ export default function TrackingPage() {
 
   // Get progress percentage based on status
   const getProgressPercentage = (status: ShipmentStatus) => {
-    const statusPercentage: Record<ShipmentStatus, number> = {
-      [ShipmentStatus.CREATED]: 5,
-      [ShipmentStatus.DOCUMENT_RECEIVED]: 10,
-      [ShipmentStatus.DOCUMENTS_SENT]: 15,
-      [ShipmentStatus.IN_TRANSIT]: 25,
-      [ShipmentStatus.CARGO_ARRIVED]: 35,
-      [ShipmentStatus.TRANSFERRED_TO_CFS]: 45,
-      [ShipmentStatus.ENTRY_REGISTERED]: 55,
-      [ShipmentStatus.CUSTOM_RELEASED]: 65,
-      [ShipmentStatus.DELIVERY_ORDER_OBTAINED]: 70,
-      [ShipmentStatus.TAXES_PAID]: 75,
-      [ShipmentStatus.ARRIVAL_MALABA]: 80,
-      [ShipmentStatus.DEPARTURE_MALABA]: 85,
-      [ShipmentStatus.ARRIVAL_NIMULE]: 90,
-      [ShipmentStatus.NIMULE_BORDER_RELEASED]: 92,
-      [ShipmentStatus.DELIVERED]: 95,
-      [ShipmentStatus.EMPTY_RETURNED]: 100,
-      [ShipmentStatus.UPDATED]: 50, // Generic update status - mid-point
-      [ShipmentStatus.DOCUMENT_REJECTED]: 0, // Special case
-    }
+   const statusPercentage: Record<ShipmentStatus, number> = {
+  [ShipmentStatus.CREATED]: 1,
+  [ShipmentStatus.DOCUMENT_RECEIVED]: 2,
+  [ShipmentStatus.DOCUMENTS_SENT]: 3,
+  [ShipmentStatus.IN_TRANSIT]: 4,
+  [ShipmentStatus.CARGO_ARRIVED]: 5,
+  [ShipmentStatus.TRANSFERRED_TO_CFS]: 6,
+  [ShipmentStatus.ENTRY_REGISTERED]: 7,
+  [ShipmentStatus.CUSTOM_RELEASED]: 8,
+  [ShipmentStatus.DELIVERY_ORDER_OBTAINED]: 9,
+  [ShipmentStatus.TAXES_PAID]: 10,
+  [ShipmentStatus.ARRIVAL_MALABA]: 11,
+  [ShipmentStatus.DEPARTURE_MALABA]: 12,
+  [ShipmentStatus.ARRIVAL_NIMULE]: 13,
+  [ShipmentStatus.NIMULE_BORDER_RELEASED]: 14,
+  [ShipmentStatus.DELIVERED]: 15,
+  [ShipmentStatus.EMPTY_RETURNED]: 16,
+  [ShipmentStatus.UPDATED]: 17,
+  [ShipmentStatus.DOCUMENT_REJECTED]: 0,
+
+  // ✅ Add missing keys here
+  [ShipmentStatus.ARRIVAL_MOMBASA]: 1.5,
+  [ShipmentStatus.TRUCK_ALLOCATED]: 2.3,
+  [ShipmentStatus.PORT_DEPARTURE]: 3.3,
+};
 
     return statusPercentage[status]
   }

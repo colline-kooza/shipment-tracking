@@ -135,8 +135,8 @@ export function getStatusLabel(status: ShipmentStatus): string {
 // Helper function to get status color
 export function getStatusColor(status: ShipmentStatus): string {
   const statusMapBg: Record<ShipmentStatus, string> = {
-    [ShipmentStatus.CREATED]: "bg-gray-500", // Neutral for initial state
-    [ShipmentStatus.UPDATED]: "bg-gray-600", // Slightly darker gray for updates
+    [ShipmentStatus.CREATED]: "bg-gray-500",
+    [ShipmentStatus.UPDATED]: "bg-gray-600",
     [ShipmentStatus.DOCUMENT_RECEIVED]: "bg-blue-500",
     [ShipmentStatus.DOCUMENTS_SENT]: "bg-indigo-500",
     [ShipmentStatus.IN_TRANSIT]: "bg-amber-500",
@@ -146,22 +146,28 @@ export function getStatusColor(status: ShipmentStatus): string {
     [ShipmentStatus.CUSTOM_RELEASED]: "bg-green-500",
     [ShipmentStatus.DELIVERY_ORDER_OBTAINED]: "bg-lime-500",
     [ShipmentStatus.TAXES_PAID]: "bg-orange-500",
-    [ShipmentStatus.ARRIVAL_MALABA]: "bg-yellow-500", // Border crossing colors
+    [ShipmentStatus.ARRIVAL_MALABA]: "bg-yellow-500",
     [ShipmentStatus.DEPARTURE_MALABA]: "bg-yellow-600",
     [ShipmentStatus.ARRIVAL_NIMULE]: "bg-pink-500",
     [ShipmentStatus.NIMULE_BORDER_RELEASED]: "bg-emerald-500",
     [ShipmentStatus.DELIVERED]: "bg-green-600",
-    [ShipmentStatus.EMPTY_RETURNED]: "bg-green-700", // Darker green for final completion
+    [ShipmentStatus.EMPTY_RETURNED]: "bg-green-700",
     [ShipmentStatus.DOCUMENT_REJECTED]: "bg-red-500",
+
+    // ✅ Add the missing keys below:
+    [ShipmentStatus.ARRIVAL_MOMBASA]: "bg-blue-400",
+    [ShipmentStatus.TRUCK_ALLOCATED]: "bg-violet-400",
+    [ShipmentStatus.PORT_DEPARTURE]: "bg-indigo-400",
   };
+
   return statusMapBg[status] || "bg-gray-500";
 }
 
 // Helper function to get status badge color
 export function getStatusBadgeColor(status: ShipmentStatus): string {
   const statusMapBg: Record<ShipmentStatus, string> = {
-    [ShipmentStatus.CREATED]: "bg-gray-500", // Neutral for initial state
-    [ShipmentStatus.UPDATED]: "bg-gray-600", // Slightly darker gray for updates
+    [ShipmentStatus.CREATED]: "bg-gray-500",
+    [ShipmentStatus.UPDATED]: "bg-gray-600",
     [ShipmentStatus.DOCUMENT_RECEIVED]: "bg-blue-500",
     [ShipmentStatus.DOCUMENTS_SENT]: "bg-indigo-500",
     [ShipmentStatus.IN_TRANSIT]: "bg-amber-500",
@@ -171,13 +177,19 @@ export function getStatusBadgeColor(status: ShipmentStatus): string {
     [ShipmentStatus.CUSTOM_RELEASED]: "bg-green-500",
     [ShipmentStatus.DELIVERY_ORDER_OBTAINED]: "bg-lime-500",
     [ShipmentStatus.TAXES_PAID]: "bg-orange-500",
-    [ShipmentStatus.ARRIVAL_MALABA]: "bg-yellow-500", // Border crossing colors
+    [ShipmentStatus.ARRIVAL_MALABA]: "bg-yellow-500",
     [ShipmentStatus.DEPARTURE_MALABA]: "bg-yellow-600",
     [ShipmentStatus.ARRIVAL_NIMULE]: "bg-pink-500",
     [ShipmentStatus.NIMULE_BORDER_RELEASED]: "bg-emerald-500",
     [ShipmentStatus.DELIVERED]: "bg-green-600",
-    [ShipmentStatus.EMPTY_RETURNED]: "bg-green-700", // Darker green for final completion
+    [ShipmentStatus.EMPTY_RETURNED]: "bg-green-700",
     [ShipmentStatus.DOCUMENT_REJECTED]: "bg-red-500",
+
+    // ✅ Add these missing ones
+    [ShipmentStatus.ARRIVAL_MOMBASA]: "bg-sky-500",
+    [ShipmentStatus.TRUCK_ALLOCATED]: "bg-indigo-400",
+    [ShipmentStatus.PORT_DEPARTURE]: "bg-blue-400",
   };
+
   return statusMapBg[status] || "bg-gray-100 text-gray-800";
 }
